@@ -11,3 +11,7 @@
 *.gif binary
 *.ico binary
 *.h5 binary
+
+# Frozen data exports: keep byte-identical to the original W&B export (it ships
+# with CRLF line endings). Do not normalize, so the file stays checksummable.
+*.csv -text
