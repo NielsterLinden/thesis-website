@@ -1,0 +1,3 @@
+[submodule "thesis-src"]
+	path = thesis-src
+	url = https://github.com/NielsterLinden/Thesis.git
