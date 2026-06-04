@@ -1,0 +1,13 @@
+# Normalize all text to LF in the repo and on checkout. The app is built and
+# deployed in a Linux container; consistent LF avoids CRLF creeping into shell
+# scripts, the Dockerfile, or config and breaking inside the image.
+* text=auto eol=lf
+
+# Binary assets — never normalize.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.h5 binary

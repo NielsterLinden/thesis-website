@@ -1,0 +1,26 @@
+# --- secrets (real values live only in .env locally / platform secret store) ---
+.env
+.env.*.local
+!.env.example
+
+# --- node ---
+node_modules/
+dist/
+backend/dist/
+web/dist/
+
+# --- python (Phase 2 sidecar) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- logs & os cruft ---
+*.log
+.DS_Store
+Thumbs.db
+
+# --- editor / tooling ---
+.vscode/
+.idea/
+.claude/settings.local.json
