@@ -21,7 +21,7 @@ React (static) -> NestJS backend -> Anthropic API
                                 wandb-workspaces -> draft report
 ```
 
-All of this ships as **one Docker image** (Node + Python) deployed to Railway/Render. No database.
+All of this ships as **one Docker image** (Node + Python) deployed to **Render** (free web-service tier). No database.
 
 ## Architectural invariants — do not relitigate
 

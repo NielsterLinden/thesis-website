@@ -25,7 +25,7 @@ endpoint we call over HTTPS with a key. We host only a thin orchestrator.
                                    |  HTTPS, auto TLS
                                    v
         +-------------------------------------------------------------+
-        |  ONE Docker service (Railway or Render)                      |
+        |  ONE Docker service (Render, free tier)                      |
         |                                                              |
         |  React frontend (built to static, served by Nest)            |
         |                                                              |
@@ -391,7 +391,7 @@ The server does not log conversation inputs or outputs — no transcripts, no
 prompt bodies, no model completions. Operational telemetry is **metadata
 only**: request id, timestamp, password-correct boolean, tool call names and
 durations, input/output token counts, and final HTTP status. Stdout is the
-sink — Railway and Render both surface recent logs, which is enough to spot
+sink — Render surfaces recent logs, which is enough to spot
 a runaway loop or a leaked password being hammered. Anything that would
 contain examiner question text or thesis content stays out of logs by
 construction.
@@ -663,10 +663,15 @@ registrar promotions shift.
 
 ## 12. Step 10: Deploy
 
-Primary path is **Railway** because its usage-based, scale-to-zero billing fits
-an idle-most-of-the-time examiner tool and onboarding is the simplest. **Render**
-is the alternative if you prefer flat, predictable monthly pricing. Both deploy
-from a GitHub repo and both run a Dockerfile.
+Target is **Render's free web-service tier** (decided 2026-06-09). It deploys
+straight from a GitHub repo, runs the Dockerfile, and hands you a free
+`https://<name>.onrender.com` URL with TLS already provisioned — no domain
+purchase or certificate setup. The free tier sleeps after ~15 minutes idle, so
+the first visit after a quiet spell incurs a ~50s cold start; for a tool a
+handful of examiners hit occasionally that is harmless. If the cold start ever
+becomes annoying, switching to a paid always-on instance (Render, or Railway) is
+a dashboard change, not a code change — the single Docker image is identical
+either way.
 
 1. Push the repo to GitHub. Ensure CI (or the platform build) runs
    `git submodule update --init --recursive` so `thesis-src` is present, or COPY
@@ -685,7 +690,11 @@ harmless.
 
 ---
 
-## 13. Step 11: Wire the domain and TLS
+## 13. Step 11 (optional): Wire a custom domain and TLS
+
+The free `https://<name>.onrender.com` URL already has working TLS, so this step
+is **optional** — that URL is what you hand to your supervisor. Do this only if
+you later want a vanity domain (e.g. `thesis-companion.dev`):
 
 1. In the platform, add the custom domain to the service.
 2. At the registrar, create the DNS record the platform specifies (typically a
@@ -693,7 +702,8 @@ harmless.
 3. The platform provisions TLS automatically. Wait for the certificate to issue,
    then confirm `https://your-domain` loads the site.
 
-Re-run the six local acceptance checks against the live domain.
+Re-run the six local acceptance checks against the live URL (the `onrender.com`
+URL, or the custom domain if you added one).
 
 ---
 
@@ -754,9 +764,10 @@ requested panels and filters.
 4. React frontend: password box, chat, PDF viewer.
 5. Dockerfile and compose (Node only for MVP).
 6. Local Docker testing; pass the six acceptance checks.
-7. Domain purchase.
-8. Deploy to Railway (or Render), set env vars, confirm.
-9. Wire domain and TLS; re-test live.
+7. Deploy to Render (free tier): connect the GitHub repo, set env vars, confirm
+   the live `onrender.com` URL serves.
+8. Run the six acceptance checks against the live URL.
+9. (Optional) custom domain + TLS, only if you want one beyond `onrender.com`.
 10. Phase 2: pre-deploy W&B verification, Python sidecar, report-spec schema and
     validator, `author_report` tool, confirm-gate UI.
 
