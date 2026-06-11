@@ -16,8 +16,10 @@ structural change. Guidance for AI coding agents is in [`CLAUDE.md`](./CLAUDE.md
 
 ## Status
 
-Bootstrapping the MVP. **Step 1** (repo init + pinned thesis submodule + frozen
-data) is in place; the NestJS backend, React frontend, and Docker image come next.
+MVP built end to end: backend, frontend, and Docker image are on `main`, and all
+seven §9 acceptance checks pass locally under `docker compose` (citations,
+refusal behavior, gate, PDF). Next: deploy to Render via `render.yaml`. Phase 2
+(W&B report authoring) starts only after the MVP is live.
 
 ## Layout
 
@@ -26,9 +28,10 @@ data) is in place; the NestJS backend, React frontend, and Docker image come nex
 | `thesis-src/` | Pinned git submodule: the thesis repo (transformer-workbench code + TeX + `docs/AXES_REFERENCE_V2.md`). |
 | `data/04_thesis_final.csv` | Frozen W&B export — the in-process query database. No live W&B read path. |
 | `web/thesis.pdf` | Compiled thesis, served static. |
-| `backend/` | NestJS orchestrator (agent loop, auth guard, MVP tools). *Scaffolded in Step 3.* |
-| `web/` | React (Vite) frontend. *Scaffolded in Step 5.* |
-| `sidecar/` | Python W&B report renderer. *Phase 2 only.* |
+| `backend/` | NestJS orchestrator: agent loop with prompt caching, password gate, the four MVP tools (`repo_grep`, `repo_read`, `wandb_query`, `axes_lookup`). |
+| `web/` | React (Vite) frontend: chat with citation chips, password gate, PDF viewer. Built to `web/dist`, served by Nest. |
+| `render.yaml` | Render Blueprint for the free-tier deploy. |
+| `sidecar/` | Python W&B report renderer. *Phase 2 only — does not exist yet.* |
 
 ## The thesis submodule
 
@@ -49,9 +52,20 @@ changed; re-run the §9 acceptance checks; commit the bumped pointer as one
 ## Local development
 
 ```bash
-# once the backend / web / Dockerfile exist (Steps 3–6):
 docker compose build && docker compose up   # -> http://localhost:8080
 ```
 
+For faster iteration outside Docker: `npm run start:dev` in `backend/` (serves
+the API and `web/dist` on :8080) and `npm run dev` in `web/` (Vite dev server,
+proxies API routes to :8080).
+
 Secrets live in `.env` (git-ignored); `.env.example` is the committed contract.
 Use a **dedicated, spend-capped** Anthropic key — never a personal key.
+
+## Deployment
+
+Render free tier, defined in [`render.yaml`](./render.yaml): dashboard → New →
+Blueprint → this repo. Render prompts for the two secrets (`ANTHROPIC_API_KEY`,
+`SITE_PASSWORD`); everything else is in the Blueprint. The `thesis-src`
+submodule is public, so Render clones it without extra auth. After the first
+deploy, re-run the §9 acceptance checks against the live URL.

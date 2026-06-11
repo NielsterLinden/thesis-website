@@ -1,0 +1,28 @@
+# Render Blueprint (Initial_plan.md §12): one free-tier web service built from
+# the Dockerfile. Create via dashboard -> New -> Blueprint -> this repo; Render
+# prompts for the two sync:false secrets and never stores them in git. The
+# free tier sleeps after ~15 min idle (first visit then takes ~50 s) and runs
+# a single instance — which the in-memory rate limit requires (§14).
+services:
+  - type: web
+    name: thesis-companion
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # The dedicated, spend-capped key (§4.2) — entered in the dashboard.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # The shared examiner password — entered in the dashboard.
+      - key: SITE_PASSWORD
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-4-7
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
