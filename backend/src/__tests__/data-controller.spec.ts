@@ -1,12 +1,13 @@
 import { statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import type { Request, Response } from 'express';
 import { loadConfig } from '../config';
 import { DataController } from '../data.controller';
 
-// Runs against the REAL frozen CSV (loadConfig().dataCsvPath), same philosophy
-// as the other suites: the artifact under test is the one we ship.
+// Runs against the REAL frozen CSV (loadConfig().dataCsvPath — the lean
+// export), same philosophy as the other suites: the artifact under test is
+// the one we ship.
 
 function makeReq(acceptEncoding?: string): Request {
   return { headers: acceptEncoding ? { 'accept-encoding': acceptEncoding } : {} } as Request;
@@ -34,7 +35,7 @@ function makeRes() {
   return { res: res as unknown as Response, raw: res, headers };
 }
 
-describe('GET /data/runs.csv', () => {
+describe('GET /runs.csv', () => {
   const config = loadConfig();
 
   it('serves the gzipped frozen CSV to gzip-accepting clients, byte-exact', () => {
@@ -46,7 +47,7 @@ describe('GET /data/runs.csv', () => {
     expect(headers['content-type']).toContain('text/csv');
     expect(headers['content-encoding']).toBe('gzip');
     expect(headers['vary']).toBe('accept-encoding');
-    expect(headers['content-disposition']).toContain('04_thesis_final.csv');
+    expect(headers['content-disposition']).toContain(basename(config.dataCsvPath));
 
     const decoded = gunzipSync(raw.body as Buffer);
     expect(decoded.length).toBe(statSync(config.dataCsvPath).size);

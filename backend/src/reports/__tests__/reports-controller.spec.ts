@@ -9,7 +9,7 @@ import { ReportsController } from '../reports.controller';
 import { SidecarService } from '../sidecar.service';
 
 // The controller re-validates against the REAL frozen CSV (loadConfig paths),
-// so the spec below uses real columns of data/04_thesis_final.csv.
+// so the spec below uses real columns of data/04_thesis_final_lean.csv.
 const H10_KEY = 'config:axes/H10_Model Size Label.value';
 const B1_KEY = 'config:axes/B1_Bias Activation Set.value';
 

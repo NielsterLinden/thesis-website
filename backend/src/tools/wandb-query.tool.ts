@@ -78,8 +78,9 @@ export class WandbQueryTool implements Tool {
   readonly definition: ToolDefinition = {
     name: 'wandb_query',
     description:
-      'Query the FROZEN W&B export (data/04_thesis_final.csv) with a structured ' +
-      'filter+aggregation. Use this for any quantitative result question ' +
+      'Query the FROZEN W&B export (data/04_thesis_final_lean.csv: scalar ' +
+      'summaries + config axes; ROC/PR curve arrays are NOT in this export) ' +
+      'with a structured filter+aggregation. Use this for any quantitative result question ' +
       '(e.g. "median test AUROC for the d256_L6 baseline grouped by B1"). ' +
       'Fields and groupby accept thesis axis IDs (B1, H10, A3, R5, …) or exact ' +
       'CSV columns; the metric accepts a bare name (test_auroc) or a full ' +

@@ -149,9 +149,15 @@ export function loadConfig(): AppConfig {
 
     appRoot: APP_ROOT,
     thesisSrcDir,
+    // The lean derivative of the frozen export: identical rows, minus the six
+    // array-payload columns (ROC/PR curves, score histograms) that hold ~93%
+    // of the bytes and that wandb_query — a scalar aggregator — can never use.
+    // /runs.csv serves this same file, so a downloaded copy reproduces every
+    // [wandb: …] citation. The full export stays at data/04_thesis_final.csv
+    // (archival); regenerate via `node backend/scripts/make-lean-csv.mjs`.
     dataCsvPath: process.env.DATA_CSV_PATH
       ? resolve(process.env.DATA_CSV_PATH)
-      : resolve(APP_ROOT, 'data', '04_thesis_final.csv'),
+      : resolve(APP_ROOT, 'data', '04_thesis_final_lean.csv'),
     webDir: process.env.WEB_DIR ? resolve(process.env.WEB_DIR) : resolve(APP_ROOT, 'web'),
     thesisPdfPath: process.env.THESIS_PDF_PATH
       ? resolve(process.env.THESIS_PDF_PATH)

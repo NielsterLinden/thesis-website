@@ -30,7 +30,7 @@ Render Blueprint instance, and run `python sidecar/smoke_test.py --save` (the
 | Path | What |
 |------|------|
 | `thesis-src/` | Pinned git submodule: the thesis repo (transformer-workbench code + TeX + `docs/AXES_REFERENCE_V2.md`). |
-| `data/04_thesis_final.csv` | Frozen W&B export — the in-process query database. No live W&B read path. |
+| `data/04_thesis_final.csv` | Frozen W&B export (archival, 34.5 MB). The backend queries and serves the lean derivative `data/04_thesis_final_lean.csv` (2.7 MB, minus the array-payload columns; regenerate via `node backend/scripts/make-lean-csv.mjs`). No live W&B read path. |
 | `web/thesis.pdf` | Compiled thesis, served static. |
 | `backend/` | NestJS orchestrator: agent loop with prompt caching, password gate, the four MVP tools (`repo_grep`, `repo_read`, `wandb_query`, `axes_lookup`). |
 | `web/` | React (Vite) frontend: public landing page (W&B links modal, CSV download), chat with citation chips behind the password gate, PDF viewer. Built to `web/dist`, served by Nest. |

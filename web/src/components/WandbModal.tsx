@@ -52,9 +52,12 @@ export function WandbModal({
             Ask the assistant to compose a report spec; you confirm before a draft is saved.
           </span>
         </button>
-        <a className="modal-option" href="/data/runs.csv">
+        <a className="modal-option" href="/runs.csv" download>
           <span className="modal-option-title">Download the raw data (CSV)</span>
-          <span className="modal-option-desc">1&thinsp;785 runs × 162 columns — ~9 MB download, 33 MB unpacked.</span>
+          <span className="modal-option-desc">
+            1&thinsp;785 runs × 156 columns (2.7 MB) — the exact file the assistant queries; the bulky ROC/PR
+            curve arrays are excluded.
+          </span>
         </a>
         <div className="modal-foot">
           <span className="spacer" />

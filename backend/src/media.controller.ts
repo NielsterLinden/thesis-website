@@ -7,7 +7,8 @@ import { APP_CONFIG } from './tokens';
 /**
  * Serves the compiled thesis PDF (Initial_plan.md §5.4). Ungated: the PDF is a
  * public artifact the examiners already hold; the spend-sensitive surface is
- * /chat, which the password guard protects.
+ * /chat, which the password guard protects. The runs-CSV download lives in
+ * DataController (it needs a gzip cache, not a plain sendFile).
  */
 @Controller()
 export class MediaController {
