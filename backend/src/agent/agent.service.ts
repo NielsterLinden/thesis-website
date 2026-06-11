@@ -108,7 +108,7 @@ export class AgentService {
         usage.input_tokens >= this.config.maxConversationInputTokens;
       if (overBudget) capped = true;
 
-      const response = await this.anthropic.messages.create({
+      const request: Anthropic.MessageCreateParamsNonStreaming = {
         model: this.config.anthropicModel,
         max_tokens: this.config.maxOutputTokens,
         system: this.staticContext.systemBlocks,
@@ -116,10 +116,15 @@ export class AgentService {
         // Toggling tool_choice does NOT invalidate the tools/system cache
         // (only the messages tier), so the big static prefix stays cached.
         tool_choice: overBudget ? { type: 'none' } : { type: 'auto' },
-        thinking: { type: 'adaptive' },
-        output_config: { effort: this.config.anthropicEffort },
         messages: withLastMessageCached(messages),
-      });
+      };
+      // effort=none omits both params: models without adaptive-thinking
+      // support (e.g. claude-haiku-4-5) 400 on either one.
+      if (this.config.anthropicEffort !== 'none') {
+        request.thinking = { type: 'adaptive' };
+        request.output_config = { effort: this.config.anthropicEffort };
+      }
+      const response = await this.anthropic.messages.create(request);
       lastResponse = response;
 
       // usage.input_tokens is the UNCACHED conversation remainder; the ~static

@@ -69,3 +69,7 @@ Blueprint → this repo. Render prompts for the two secrets (`ANTHROPIC_API_KEY`
 `SITE_PASSWORD`); everything else is in the Blueprint. The `thesis-src`
 submodule is public, so Render clones it without extra auth. After the first
 deploy, re-run the §9 acceptance checks against the live URL.
+
+The Blueprint pins `claude-haiku-4-5` with `ANTHROPIC_EFFORT=none` and tight
+per-question caps: one question is bounded at ~$0.50 even in the adversarial
+worst case (~$0.03–0.15 typical with a warm prompt cache).

@@ -58,9 +58,11 @@ export interface AppConfig {
    * Opus 4.7/4.8 use adaptive thinking + an effort knob instead of
    * temperature/budget_tokens (those now 400). effort is the single biggest
    * cost lever on this model family; "high" is the API default. Tunable here
-   * so cost can be dialled without a code change.
+   * so cost can be dialled without a code change. "none" omits the thinking
+   * and effort params entirely — required for models without adaptive-thinking
+   * support (e.g. claude-haiku-4-5, which 400s on either param).
    */
-  anthropicEffort: 'low' | 'medium' | 'high' | 'max';
+  anthropicEffort: 'none' | 'low' | 'medium' | 'high' | 'max';
 
   // Auth
   sitePassword: string;
@@ -105,7 +107,7 @@ export function loadConfig(): AppConfig {
     : resolve(APP_ROOT, 'thesis-src');
 
   const effortRaw = str('ANTHROPIC_EFFORT', 'high');
-  const effort = (['low', 'medium', 'high', 'max'].includes(effortRaw)
+  const effort = (['none', 'low', 'medium', 'high', 'max'].includes(effortRaw)
     ? effortRaw
     : 'high') as AppConfig['anthropicEffort'];
 

@@ -20,8 +20,20 @@ services:
       # The shared examiner password — entered in the dashboard.
       - key: SITE_PASSWORD
         sync: false
+      # Haiku 4.5 ($1/$5 per 1M, cache reads $0.10/1M) instead of Opus 4.7 for
+      # cost. effort=none is REQUIRED with Haiku (no adaptive-thinking support);
+      # the two caps below bound one question at ~$0.50 worst case (~$0.05-0.15
+      # realistic warm-cache). To go back to Opus: model=claude-opus-4-7,
+      # effort=high, and the caps can be relaxed (but redo the cost math —
+      # Opus tokens are 5x the price and its context is 1M, not 200k).
       - key: ANTHROPIC_MODEL
-        value: claude-opus-4-7
+        value: claude-haiku-4-5
+      - key: ANTHROPIC_EFFORT
+        value: none
+      - key: MAX_TOOL_CALLS_PER_TURN
+        value: "6"
+      - key: MAX_OUTPUT_TOKENS
+        value: "2500"
       - key: NODE_ENV
         value: production
       - key: PORT
