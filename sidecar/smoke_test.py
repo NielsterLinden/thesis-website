@@ -107,6 +107,7 @@ def step2_save_draft(cfg: dict) -> None:
     }
 
     print("\n== Step 2: saving one trivial DRAFT report through render_report.py ==")
+    render_report.ensure_target_project(cfg["entity"], cfg["target"])
     import wandb_workspaces.reports.v2 as wr
     from wandb_workspaces import expr
 

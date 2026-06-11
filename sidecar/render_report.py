@@ -154,6 +154,19 @@ def build_panel_grid(wr, expr, spec, panel):
     return wr.PanelGrid(runsets=[build_runset(wr, expr, spec, extra_groupby)], panels=[p])
 
 
+def ensure_target_project(entity: str, target: str) -> None:
+    """Create the quarantine project on first use. This is the only project
+    this code may create — the canonical project is never touched."""
+    try:
+        import wandb
+
+        api = wandb.Api()
+        if target not in (p.name for p in api.projects(entity)):
+            api.create_project(target, entity)
+    except Exception:  # noqa: BLE001 — let the save surface the real error
+        pass
+
+
 def main() -> None:
     try:
         spec = json.loads(sys.stdin.read())
@@ -176,6 +189,8 @@ def main() -> None:
         from wandb_workspaces import expr
     except Exception as e:  # noqa: BLE001
         fail(f"wandb-workspaces is not importable: {e}")
+
+    ensure_target_project(spec["entity"], spec["target_project"])
 
     try:
         blocks = []
