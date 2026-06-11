@@ -1,0 +1,25 @@
+# Secrets must never enter the build context — the image gets its
+# configuration from the platform's environment, not a baked .env.
+.env
+.env.*
+!.env.example
+
+# Dependency and build output (rebuilt inside the stages)
+node_modules
+**/node_modules
+backend/dist
+web/dist
+
+# Git metadata; thesis-src/.git is the submodule gitlink redirect
+.git
+.gitmodules
+thesis-src/.git
+
+# Tooling and docs the image does not serve
+.claude
+.vscode
+.idea
+*.log
+Initial_plan.md
+CLAUDE.md
+README.md

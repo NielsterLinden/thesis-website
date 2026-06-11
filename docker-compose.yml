@@ -1,0 +1,13 @@
+# Local dev convenience (Initial_plan.md §8): build the production image and
+# run it with the real .env. The mounts overlay the baked-in copies so a
+# thesis-src or CSV change is visible without a rebuild.
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./thesis-src:/app/thesis-src:ro
+      - ./data:/app/data:ro
