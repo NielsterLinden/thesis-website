@@ -1,8 +1,9 @@
 # Thesis Companion
 
-A password-gated companion site that lets supervisors and examiners interrogate a
-master's thesis, its codebase, and a frozen Weights & Biases experiment export
-through a single LLM agent. The agent has several tool surfaces — thesis-in-context,
+A companion site that lets supervisors and examiners interrogate a master's
+thesis, its codebase, and a frozen Weights & Biases experiment export through a
+single LLM agent. The landing page, PDF viewer, and data download are public;
+the assistant is password-gated (it is the only surface that spends money). The agent has several tool surfaces — thesis-in-context,
 agentic code grep/read, frozen-CSV W&B queries, and V2 axis lookup — and cites a
 verifiable source for every factual claim.
 
@@ -32,7 +33,7 @@ Render Blueprint instance, and run `python sidecar/smoke_test.py --save` (the
 | `data/04_thesis_final.csv` | Frozen W&B export — the in-process query database. No live W&B read path. |
 | `web/thesis.pdf` | Compiled thesis, served static. |
 | `backend/` | NestJS orchestrator: agent loop with prompt caching, password gate, the four MVP tools (`repo_grep`, `repo_read`, `wandb_query`, `axes_lookup`). |
-| `web/` | React (Vite) frontend: chat with citation chips, password gate, PDF viewer. Built to `web/dist`, served by Nest. |
+| `web/` | React (Vite) frontend: public landing page (W&B links modal, CSV download), chat with citation chips behind the password gate, PDF viewer. Built to `web/dist`, served by Nest. |
 | `render.yaml` | Render Blueprint for the free-tier deploy. |
 | `sidecar/` | Python W&B report renderer (Phase 2): `render_report.py` (validated spec → draft report) and `smoke_test.py` (the §10 pre-deploy verification). |
 

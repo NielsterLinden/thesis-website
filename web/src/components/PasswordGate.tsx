@@ -31,9 +31,10 @@ export function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <div className="gate">
       <form className="gate-card" onSubmit={submit}>
-        <h1>Thesis Companion</h1>
+        <h1>Unlock the assistant</h1>
         <p className="gate-sub">
-          Ask about the thesis, its codebase, and the frozen experiment database. Access is by shared password.
+          Chat access is by shared password — each question spends real model tokens. The thesis PDF, code links,
+          and data downloads are open to everyone.
         </p>
         <input
           type="password"

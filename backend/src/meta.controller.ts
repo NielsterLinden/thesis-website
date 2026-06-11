@@ -1,24 +1,39 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { AppConfig } from './config';
+import { AppConfig, isPlaceholder } from './config';
 import { APP_CONFIG } from './tokens';
 
 /**
- * GET /meta — ungated, static facts the frontend needs to render citations:
- * the submodule repo URL and pinned SHA, from which [code: path:lines] tokens
- * become links to the exact frozen blob. Nothing here is secret (the URL is
- * committed in .gitmodules), and serving it from the backend means a thesis
- * refresh (Initial_plan.md §3.1) updates citation links without a frontend
- * rebuild.
+ * GET /meta — ungated, static facts the frontend needs to render citations and
+ * the landing-page links: the submodule repo URL and pinned SHA, from which
+ * [code: path:lines] tokens become links to the exact frozen blob, plus the
+ * W&B browse URLs (runs table, reports list). Nothing here is secret (the URL
+ * is committed in .gitmodules; the W&B project is examiner-visible), and
+ * serving it from the backend means a thesis refresh (Initial_plan.md §3.1) or
+ * a W&B project move updates the links without a frontend rebuild.
  */
 @Controller()
 export class MetaController {
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
   @Get('meta')
-  meta(): { thesis_repo_url: string; thesis_src_commit: string } {
+  meta(): {
+    thesis_repo_url: string;
+    thesis_src_commit: string;
+    wandb_runs_url: string | null;
+    wandb_reports_url: string | null;
+  } {
+    // Browse links need only the entity + source project; deliberately not
+    // chained to reportsEnabled, which means "authoring on" (needs a key too).
+    const wandbConfigured =
+      !isPlaceholder(this.config.wandbEntity) && !isPlaceholder(this.config.wandbSourceProject);
+    const wandbBase = wandbConfigured
+      ? `https://wandb.ai/${encodeURIComponent(this.config.wandbEntity)}/${encodeURIComponent(this.config.wandbSourceProject)}`
+      : null;
     return {
       thesis_repo_url: this.config.submoduleRepoUrl,
       thesis_src_commit: this.config.submoduleSha,
+      wandb_runs_url: wandbBase && `${wandbBase}/table`,
+      wandb_reports_url: wandbBase && `${wandbBase}/reportlist`,
     };
   }
 }

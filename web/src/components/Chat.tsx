@@ -1,11 +1,12 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, postChat, saveReport } from '../api';
-import { DisplayMessage, SiteMeta } from '../types';
+import { DisplayMessage, PendingPrompt, SiteMeta } from '../types';
 import { Message } from './Message';
 
 /** Seed questions mirroring the §9 acceptance checks, so a first-time
- *  examiner sees what each tool surface can do. */
-const SUGGESTIONS = [
+ *  examiner sees what each tool surface can do. Exported for the landing
+ *  page, which offers the same questions as entry points into the chat. */
+export const SUGGESTIONS = [
   'Summarize the input-representation chapter.',
   'How is the FFN type resolved between standard, KAN, and MoE?',
   'What is the median test AUROC for the d256_L6 baseline, grouped by B1?',
@@ -16,10 +17,14 @@ export function Chat({
   meta,
   password,
   onAuthExpired,
+  pendingPrompt,
+  onPromptConsumed,
 }: {
   meta: SiteMeta | null;
   password: string;
   onAuthExpired: () => void;
+  pendingPrompt: PendingPrompt | null;
+  onPromptConsumed: () => void;
 }) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
@@ -30,6 +35,22 @@ export function Chat({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
+
+  // Consume a landing-page question exactly once. The seq guard (not just a
+  // null check) is load-bearing: StrictMode runs mount effects twice in dev,
+  // and an unguarded auto-send would double-spend a model call.
+  const lastSeqRef = useRef(0);
+  useEffect(() => {
+    if (!pendingPrompt || pendingPrompt.seq === lastSeqRef.current) return;
+    lastSeqRef.current = pendingPrompt.seq;
+    onPromptConsumed();
+    if (busy) {
+      setInput(pendingPrompt.text); // mid-request: prefill instead of dropping (send() no-ops while busy)
+    } else {
+      void send(pendingPrompt.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPrompt]);
 
   async function send(text: string) {
     const question = text.trim();

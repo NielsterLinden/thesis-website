@@ -110,6 +110,11 @@ export interface AppConfig {
   reportsEnabled: boolean;
 }
 
+/** Placeholder values from .env.example must not flip features on. */
+export function isPlaceholder(v: string): boolean {
+  return v === '' || v.startsWith('REPLACE') || v.startsWith('your-');
+}
+
 let cached: AppConfig | null = null;
 
 export function loadConfig(): AppConfig {
@@ -165,10 +170,8 @@ export function loadConfig(): AppConfig {
     pythonBin: str('PYTHON_BIN', 'python3'),
     reportsEnabled: false, // derived below
   };
-  // Placeholders from .env.example must not flip the feature on.
-  const placeholder = (v: string) => v === '' || v.startsWith('REPLACE') || v.startsWith('your-');
   cached.reportsEnabled =
-    !placeholder(cached.wandbEntity) && !placeholder(cached.wandbSourceProject);
+    !isPlaceholder(cached.wandbEntity) && !isPlaceholder(cached.wandbSourceProject);
 
   return cached;
 }

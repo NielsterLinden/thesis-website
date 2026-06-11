@@ -27,10 +27,22 @@ export interface ChatResponse {
   report_proposal?: ReportProposal | null;
 }
 
-/** Static facts from GET /meta, used to build [code: …] blob links. */
+/** Static facts from GET /meta: the pinned snapshot behind [code: …] blob
+ *  links, plus the W&B browse URLs for the landing page (null until the
+ *  W&B env vars hold real values; optional to tolerate an older backend). */
 export interface SiteMeta {
   thesis_repo_url: string;
   thesis_src_commit: string;
+  wandb_runs_url?: string | null;
+  wandb_reports_url?: string | null;
+}
+
+/** A question handed from the landing page to Chat. `seq` makes every click a
+ *  distinct value, so repeat clicks of the same question still fire and
+ *  StrictMode's double-run effects cannot double-send (= double-spend). */
+export interface PendingPrompt {
+  text: string;
+  seq: number;
 }
 
 /** An assistant turn as held in browser state: the text plus the per-turn

@@ -7,6 +7,7 @@ import { AuthController } from './auth/auth.controller';
 import { SitePasswordGuard } from './auth/site-password.guard';
 import { RateLimitGuard } from './common/rate-limit.guard';
 import { loadConfig } from './config';
+import { DataController } from './data.controller';
 import { HealthController } from './health.controller';
 import { MediaController } from './media.controller';
 import { MetaController } from './meta.controller';
@@ -18,6 +19,7 @@ import { APP_CONFIG } from './tokens';
   controllers: [
     AgentController,
     AuthController,
+    DataController,
     MediaController,
     MetaController,
     ReportsController,

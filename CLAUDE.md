@@ -98,7 +98,7 @@ The repo is greenfield; the commands below come from `Initial_plan.md` and will 
 
 `Initial_plan.md` §9 lists six checks. The MVP is not done until all six pass on the live domain:
 
-1. Password gate accepts/rejects correctly.
+1. Password gate accepts/rejects correctly. (Since the landing-page upgrade the gate scopes to the assistant: the start page, PDF viewer, and CSV download are public; entering Chat prompts for the password. The server contract — gated `/chat`, `/auth/check` — is unchanged.)
 2. Thesis question answered from TeX content **with `[thesis: …]` citations the frontend renders as references**.
 3. Code question (e.g. FFN type resolution between standard/KAN/MoE) answered from real code via `repo_grep`/`repo_read`, not guessed, **with `[code: path:lines]` citations linking to the pinned submodule blob**.
 4. W&B question (e.g. median test AUROC for `d256_L6` grouped by B1) answered from the frozen CSV with correct group counts **and a `[wandb: …]` citation showing the resolved filter set and N**.
