@@ -1,8 +1,7 @@
 # Thesis Companion — single-service image (Initial_plan.md §8).
-# MVP build: Node only. The Python sidecar install and COPY arrive with
-# Phase 2 (report authoring); the layout below already leaves room for them.
-# The backend spawns no subprocesses and reads everything from disk, so the
-# runtime stage needs no git, no python, no build tools.
+# Node serves everything; Python exists ONLY for the Phase 2 report sidecar
+# (sidecar/render_report.py), which /reports/save spawns per request. No git,
+# no build tools in the runtime stage.
 
 # --- build frontend ---
 FROM node:22-slim AS web-build
@@ -25,6 +24,13 @@ FROM node:22-slim
 ENV NODE_ENV=production
 WORKDIR /app
 
+# python + sidecar deps (Phase 2 report authoring, Initial_plan.md §6/§8)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 python3-pip \
+  && rm -rf /var/lib/apt/lists/*
+COPY sidecar/requirements.txt ./sidecar/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r sidecar/requirements.txt
+
 # backend runtime deps only
 COPY backend/package*.json ./backend/
 RUN cd backend && npm ci --omit=dev
@@ -33,6 +39,7 @@ RUN cd backend && npm ci --omit=dev
 # (backend/dist/config.js -> ../.. = /app) without any env override.
 COPY --from=api-build /backend/dist ./backend/dist
 COPY --from=web-build /web/dist ./web/dist
+COPY sidecar ./sidecar
 COPY web/thesis.pdf ./web/thesis.pdf
 COPY data ./data
 # The pinned submodule must be checked out in the build context

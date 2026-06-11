@@ -1,4 +1,5 @@
 import { AppConfig } from '../config';
+import { AuthorReportTool } from './author-report.tool';
 import { AxesLookupTool } from './axes-lookup.tool';
 import { loadAxesReference } from './axes-reference';
 import { loadCsvStore } from './csv-store';
@@ -9,7 +10,8 @@ import { WandbQueryTool } from './wandb-query.tool';
 /**
  * The four MVP tool surfaces (Initial_plan.md §5.3). thesis_context is not a
  * tool — the full TeX lives in the cached prompt prefix (see static-context.ts).
- * author_report is Phase 2.
+ * author_report (Phase 2) registers only when the W&B entity/source project
+ * are configured, so the MVP deploy is unchanged without them.
  */
 export class ToolRegistry {
   private readonly tools = new Map<string, Tool>();
@@ -21,12 +23,22 @@ export class ToolRegistry {
   static build(config: AppConfig): ToolRegistry {
     const csv = loadCsvStore(config.dataCsvPath);
     const axes = loadAxesReference(config.axesReferencePath);
-    return new ToolRegistry([
+    const tools: Tool[] = [
       new RepoGrepTool(config.thesisSrcDir),
       new RepoReadTool(config.thesisSrcDir),
       new WandbQueryTool(csv),
       new AxesLookupTool(axes, csv),
-    ]);
+    ];
+    if (config.reportsEnabled) {
+      tools.push(
+        new AuthorReportTool(csv, {
+          entity: config.wandbEntity,
+          sourceProject: config.wandbSourceProject,
+          targetProject: config.wandbTargetProject,
+        }),
+      );
+    }
+    return new ToolRegistry(tools);
   }
 
   definitions(): ToolDefinition[] {

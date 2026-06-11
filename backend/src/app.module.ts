@@ -10,13 +10,23 @@ import { loadConfig } from './config';
 import { HealthController } from './health.controller';
 import { MediaController } from './media.controller';
 import { MetaController } from './meta.controller';
+import { ReportsController } from './reports/reports.controller';
+import { SidecarService } from './reports/sidecar.service';
 import { APP_CONFIG } from './tokens';
 
 @Module({
-  controllers: [AgentController, AuthController, MediaController, MetaController, HealthController],
+  controllers: [
+    AgentController,
+    AuthController,
+    MediaController,
+    MetaController,
+    ReportsController,
+    HealthController,
+  ],
   providers: [
     { provide: APP_CONFIG, useFactory: loadConfig },
     AgentService,
+    SidecarService,
     RateLimitGuard,
     SitePasswordGuard,
   ],

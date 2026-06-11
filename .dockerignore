@@ -9,6 +9,7 @@ node_modules
 **/node_modules
 backend/dist
 web/dist
+**/__pycache__
 
 # Git metadata; thesis-src/.git is the submodule gitlink redirect
 .git

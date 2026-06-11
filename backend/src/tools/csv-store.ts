@@ -13,6 +13,22 @@ const METRIC_PREFIX = 'eval_v2/';
 export type Row = Record<string, string>;
 
 /**
+ * CSV column `config/axes/A3_Attention Type` -> report-spec field
+ * `config:axes/A3_Attention Type.value` (Initial_plan.md §6.2). The report
+ * spec stores the latter, unambiguous form; the literal live-API syntax is
+ * confirmed by the §10 smoke test before any real save.
+ */
+export function toReportSpecKey(csvColumn: string): string {
+  return `${csvColumn.replace(/^config\//, 'config:')}.value`;
+}
+
+/** Inverse of toReportSpecKey; null when the token is not in spec-key form. */
+export function fromReportSpecKey(specKey: string): string | null {
+  const m = /^config:(.+)\.value$/.exec(specKey);
+  return m ? `config/${m[1]}` : null;
+}
+
+/**
  * In-memory view of the frozen W&B export (data/04_thesis_final.csv). Loaded
  * once at process start; there is no live W&B read path (Initial_plan.md §0).
  *

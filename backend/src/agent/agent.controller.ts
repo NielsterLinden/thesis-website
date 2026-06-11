@@ -53,6 +53,7 @@ export class AgentController {
       tool_calls: result.tool_calls,
       usage: result.usage,
       capped: result.capped,
+      report_proposal: result.report_proposal,
     };
   }
 

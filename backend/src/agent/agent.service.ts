@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import { AppConfig } from '../config';
+import { ReportProposal } from '../reports/spec';
 import { APP_CONFIG } from '../tokens';
 import { ToolRegistry } from '../tools/registry';
 import { buildStaticContext, StaticContext } from './static-context';
@@ -23,6 +24,12 @@ export interface ChatResult {
   tool_calls: string[];
   usage: ChatUsage;
   capped: boolean;
+  /**
+   * Phase 2: the turn's validated report proposal (if author_report ran),
+   * captured server-side from the tool result. The model's text never carries
+   * the spec, so what the user confirms is exactly what the validator passed.
+   */
+  report_proposal: ReportProposal | null;
 }
 
 /** Add a cache_control breakpoint to the last message so the conversation
@@ -97,6 +104,7 @@ export class AgentService {
     let toolCalls = 0;
     let capped = false;
     let lastResponse: Anthropic.Message | null = null;
+    let reportProposal: ReportProposal | null = null;
 
     // Hard iteration ceiling: at most one tool round-trip per allowed tool call,
     // plus one final no-tools call to force an answer.
@@ -136,7 +144,7 @@ export class AgentService {
       usage.cache_creation_input_tokens += response.usage.cache_creation_input_tokens ?? 0;
 
       if (overBudget || response.stop_reason !== 'tool_use') {
-        return this.finalize(response, toolCallNames, usage, capped);
+        return this.finalize(response, toolCallNames, usage, capped, reportProposal);
       }
 
       // Preserve the full assistant content (incl. thinking + tool_use blocks,
@@ -163,6 +171,9 @@ export class AgentService {
           tu.name,
           (tu.input ?? {}) as Record<string, unknown>,
         );
+        // Last successful proposal of the turn wins (a corrected re-proposal
+        // should supersede the earlier card, not sit beside it).
+        if (result.proposal && !result.isError) reportProposal = result.proposal;
         toolResults.push({
           type: 'tool_result',
           tool_use_id: tu.id,
@@ -175,7 +186,7 @@ export class AgentService {
 
     // Exhausted the iteration ceiling without a terminal stop — finalize what we have.
     capped = true;
-    return this.finalize(lastResponse, toolCallNames, usage, capped);
+    return this.finalize(lastResponse, toolCallNames, usage, capped, reportProposal);
   }
 
   private finalize(
@@ -183,6 +194,7 @@ export class AgentService {
     toolCalls: string[],
     usage: ChatUsage,
     capped: boolean,
+    reportProposal: ReportProposal | null,
   ): ChatResult {
     let answer = response
       ? response.content
@@ -204,6 +216,7 @@ export class AgentService {
       tool_calls: toolCalls,
       usage,
       capped,
+      report_proposal: reportProposal,
     };
   }
 }

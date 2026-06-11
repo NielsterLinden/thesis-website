@@ -34,6 +34,19 @@ services:
         value: "6"
       - key: MAX_OUTPUT_TOKENS
         value: "2500"
+      # Phase 2: W&B report authoring. The key must be from a DEDICATED W&B
+      # account/service account that can write ONLY thesis-visitor-reports
+      # (§4.3) — never the canonical thesis project. Leave the three prompts
+      # blank to ship with report authoring disabled (the author_report tool
+      # then never registers and /reports/save refuses).
+      - key: WANDB_API_KEY
+        sync: false
+      - key: WANDB_ENTITY
+        sync: false
+      - key: WANDB_SOURCE_PROJECT
+        sync: false
+      - key: WANDB_TARGET_PROJECT
+        value: thesis-visitor-reports
       - key: NODE_ENV
         value: production
       - key: PORT

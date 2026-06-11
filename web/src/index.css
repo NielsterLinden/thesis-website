@@ -404,3 +404,47 @@ a.cite:hover {
   flex: 1;
   border: none;
 }
+
+/* ---------- report confirm card (Phase 2) ---------- */
+
+.report-confirm {
+  margin-top: 10px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  padding: 12px 14px;
+}
+
+.report-confirm-head {
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.report-confirm-summary {
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
+  overflow-x: auto;
+}
+
+.report-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-confirm-error {
+  color: #b3261e;
+  font-size: 0.85em;
+}
+
+.report-confirm-saved a {
+  color: var(--accent);
+  font-weight: 600;
+}

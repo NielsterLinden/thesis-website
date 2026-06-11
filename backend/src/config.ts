@@ -95,6 +95,19 @@ export interface AppConfig {
   // that point at the exact frozen blob the answer was grounded in.
   submoduleSha: string;
   submoduleRepoUrl: string;
+
+  // Phase 2: W&B report authoring (Initial_plan.md §6). The agent only emits a
+  // validated spec; the sidecar holds the only W&B write path. Authoring is
+  // enabled when entity + source project are configured — without them the
+  // author_report tool is not registered and /reports/save refuses.
+  wandbApiKey: string;
+  wandbEntity: string;
+  wandbSourceProject: string;
+  /** The ONLY project reports are written to (§4.3) — never the canonical one. */
+  wandbTargetProject: string;
+  /** Python interpreter for the sidecar ("python3" in the image; "python" on Windows dev). */
+  pythonBin: string;
+  reportsEnabled: boolean;
 }
 
 let cached: AppConfig | null = null;
@@ -144,7 +157,18 @@ export function loadConfig(): AppConfig {
 
     submoduleSha: str('SUBMODULE_SHA', '9f0c964ea939881b913759e94d180fab175e03f6'),
     submoduleRepoUrl: str('SUBMODULE_REPO_URL', 'https://github.com/NielsterLinden/Thesis'),
+
+    wandbApiKey: str('WANDB_API_KEY'),
+    wandbEntity: str('WANDB_ENTITY'),
+    wandbSourceProject: str('WANDB_SOURCE_PROJECT'),
+    wandbTargetProject: str('WANDB_TARGET_PROJECT', 'thesis-visitor-reports'),
+    pythonBin: str('PYTHON_BIN', 'python3'),
+    reportsEnabled: false, // derived below
   };
+  // Placeholders from .env.example must not flip the feature on.
+  const placeholder = (v: string) => v === '' || v.startsWith('REPLACE') || v.startsWith('your-');
+  cached.reportsEnabled =
+    !placeholder(cached.wandbEntity) && !placeholder(cached.wandbSourceProject);
 
   return cached;
 }

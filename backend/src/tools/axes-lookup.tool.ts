@@ -1,11 +1,6 @@
 import { AxesReference } from './axes-reference';
-import { CsvStore } from './csv-store';
+import { CsvStore, toReportSpecKey } from './csv-store';
 import { Tool, ToolDefinition, ToolResult, toolError } from './types';
-
-/** CSV column `config/axes/A3_Attention Type` -> report-spec `config:axes/A3_Attention Type.value`. */
-function toReportSpecKey(csvColumn: string): string {
-  return `${csvColumn.replace(/^config\/axes\//, 'config:axes/')}.value`;
-}
 
 export class AxesLookupTool implements Tool {
   constructor(

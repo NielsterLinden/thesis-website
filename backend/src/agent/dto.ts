@@ -1,3 +1,4 @@
+import { ReportProposal } from '../reports/spec';
 import { ChatUsage } from './agent.service';
 
 export interface ChatMessageDto {
@@ -15,4 +16,6 @@ export interface ChatResponseDto {
   tool_calls: string[];
   usage: ChatUsage;
   capped: boolean;
+  /** Phase 2: validated report proposal for the confirm card (null when none). */
+  report_proposal: ReportProposal | null;
 }

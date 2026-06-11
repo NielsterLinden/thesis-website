@@ -10,12 +10,21 @@ export interface ChatUsage {
   cache_creation_input_tokens: number;
 }
 
+/** A validated W&B report proposal awaiting human confirmation (Phase 2).
+ *  The spec is opaque to the frontend: it is displayed via `summary` and sent
+ *  back to /reports/save byte-for-byte — the browser never edits it. */
+export interface ReportProposal {
+  spec: unknown;
+  summary: string;
+}
+
 export interface ChatResponse {
   answer: string;
   stop_reason: string | null;
   tool_calls: string[];
   usage: ChatUsage;
   capped: boolean;
+  report_proposal?: ReportProposal | null;
 }
 
 /** Static facts from GET /meta, used to build [code: …] blob links. */
@@ -34,4 +43,6 @@ export interface TurnMeta {
 
 export interface DisplayMessage extends ChatMessage {
   meta?: TurnMeta;
+  /** Confirm card payload, attached to the assistant turn that proposed it. */
+  proposal?: ReportProposal;
 }

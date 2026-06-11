@@ -57,6 +57,22 @@ export async function postChat(messages: ChatMessage[], pw: string): Promise<Cha
   return (await res.json()) as ChatResponse;
 }
 
+/** POST /reports/save — call 2 of the confirm protocol: the human clicked
+ *  Confirm, the validated spec goes back, the server re-validates and saves a
+ *  DRAFT W&B report. Returns the draft URL. */
+export async function saveReport(spec: unknown, pw: string): Promise<{ url: string }> {
+  const res = await fetch('/reports/save', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      [PASSWORD_HEADER]: pw,
+    },
+    body: JSON.stringify({ spec }),
+  });
+  if (!res.ok) throw new ApiError(res.status, await bodyMessage(res));
+  return (await res.json()) as { url: string };
+}
+
 export async function fetchMeta(): Promise<SiteMeta | null> {
   try {
     const res = await fetch('/meta');

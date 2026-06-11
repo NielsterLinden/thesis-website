@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { codeCitationUrl, countCitations, decodeCitation, rewriteCitations } from '../citations';
 import { DisplayMessage, SiteMeta } from '../types';
+import { ReportConfirm } from './ReportConfirm';
 
 /** Below this length an assistant reply is treated as conversational filler
  *  ("you're welcome") and the no-citations notice is withheld. */
@@ -39,7 +40,15 @@ function CitationChip({ href, meta }: { href: string; meta: SiteMeta | null }) {
   );
 }
 
-export function Message({ msg, meta }: { msg: DisplayMessage; meta: SiteMeta | null }) {
+export function Message({
+  msg,
+  meta,
+  onSaveReport,
+}: {
+  msg: DisplayMessage;
+  meta: SiteMeta | null;
+  onSaveReport?: (spec: unknown) => Promise<{ url: string }>;
+}) {
   if (msg.role === 'user') {
     return (
       <div className="msg msg-user">
@@ -70,6 +79,7 @@ export function Message({ msg, meta }: { msg: DisplayMessage; meta: SiteMeta | n
           {rewriteCitations(msg.content)}
         </ReactMarkdown>
       </div>
+      {msg.proposal && onSaveReport && <ReportConfirm proposal={msg.proposal} onSave={onSaveReport} />}
       {showUncited && (
         <div className="msg-warning">No source citations in this reply — treat its factual claims with care.</div>
       )}

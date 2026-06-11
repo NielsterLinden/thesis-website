@@ -1,5 +1,5 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { ApiError, postChat } from '../api';
+import { ApiError, postChat, saveReport } from '../api';
 import { DisplayMessage, SiteMeta } from '../types';
 import { Message } from './Message';
 
@@ -50,6 +50,7 @@ export function Chat({
           role: 'assistant',
           content: res.answer,
           meta: { tool_calls: res.tool_calls, usage: res.usage, capped: res.capped },
+          proposal: res.report_proposal ?? undefined,
         },
       ]);
     } catch (err) {
@@ -101,7 +102,7 @@ export function Chat({
           </div>
         )}
         {messages.map((m, i) => (
-          <Message key={i} msg={m} meta={meta} />
+          <Message key={i} msg={m} meta={meta} onSaveReport={(spec) => saveReport(spec, password)} />
         ))}
         {busy && (
           <div className="msg msg-assistant">

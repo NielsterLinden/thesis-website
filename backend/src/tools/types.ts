@@ -21,6 +21,13 @@ export interface ToolResult {
   content: string;
   /** Marks the tool_result block as an error so the model can recover. */
   isError?: boolean;
+  /**
+   * Phase 2 side channel: a validated report proposal captured by the agent
+   * loop and returned to the frontend OUTSIDE the model's text, so the spec
+   * the user confirms is exactly the one the validator approved — the model
+   * never relays (and so can never mutate) what gets saved (§6.3).
+   */
+  proposal?: import('../reports/spec').ReportProposal;
 }
 
 export interface Tool {

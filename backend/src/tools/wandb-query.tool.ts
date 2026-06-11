@@ -2,7 +2,7 @@ import { CsvStore, Row } from './csv-store';
 import { Tool, ToolDefinition, ToolResult, toolError } from './types';
 
 const OPS = ['==', '!=', 'in', '>', '<', '>=', '<='] as const;
-type Op = (typeof OPS)[number];
+export type Op = (typeof OPS)[number];
 
 const AGGS = ['median', 'mean', 'min', 'max', 'count'] as const;
 type Agg = (typeof AGGS)[number];
@@ -46,7 +46,9 @@ function fmt(n: number): string {
   return String(Number.parseFloat(n.toPrecision(6)));
 }
 
-function compare(cellRaw: string | undefined, op: Op, value: unknown): boolean {
+/** Shared filter semantics: author_report reuses this so the group counts on a
+ *  report confirm card are byte-identical to what wandb_query would report. */
+export function compare(cellRaw: string | undefined, op: Op, value: unknown): boolean {
   const cell = (cellRaw ?? '').trim();
   switch (op) {
     case '==':
