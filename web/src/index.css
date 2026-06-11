@@ -57,10 +57,20 @@ button:disabled {
   cursor: default;
 }
 
-button.ghost {
+button.ghost,
+a.ghost {
   background: transparent;
   color: var(--muted);
   border-color: var(--border);
+}
+
+/* Anchors styled as ghost buttons (e.g. the runs-CSV download link). */
+a.ghost {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-decoration: none;
 }
 
 .spacer {

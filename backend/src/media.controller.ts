@@ -1,13 +1,14 @@
 import { existsSync } from 'node:fs';
+import { basename } from 'node:path';
 import { Controller, Get, Inject, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { AppConfig } from './config';
 import { APP_CONFIG } from './tokens';
 
 /**
- * Serves the compiled thesis PDF (Initial_plan.md §5.4). Ungated: the PDF is a
- * public artifact the examiners already hold; the spend-sensitive surface is
- * /chat, which the password guard protects.
+ * Serves the compiled thesis PDF (Initial_plan.md §5.4) and the lean runs CSV.
+ * Ungated: both are frozen artifacts the examiners may already hold; the
+ * spend-sensitive surface is /chat, which the password guard protects.
  */
 @Controller()
 export class MediaController {
@@ -22,6 +23,22 @@ export class MediaController {
     }
     res.type('application/pdf');
     res.sendFile(path, (err) => {
+      if (err && !res.headersSent) res.status(500).end();
+    });
+  }
+
+  /**
+   * The exact CSV the agent queries (config.dataCsvPath — the lean export),
+   * so a downloaded copy reproduces every [wandb: …] citation the site emits.
+   */
+  @Get('runs.csv')
+  getRunsCsv(@Res() res: Response): void {
+    const path = this.config.dataCsvPath;
+    if (!existsSync(path)) {
+      res.status(404).send('runs.csv not found');
+      return;
+    }
+    res.download(path, basename(path), (err) => {
       if (err && !res.headersSent) res.status(500).end();
     });
   }

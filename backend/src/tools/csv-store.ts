@@ -29,8 +29,11 @@ export function fromReportSpecKey(specKey: string): string | null {
 }
 
 /**
- * In-memory view of the frozen W&B export (data/04_thesis_final.csv). Loaded
- * once at process start; there is no live W&B read path (Initial_plan.md §0).
+ * In-memory view of the frozen W&B export — the lean derivative
+ * (data/04_thesis_final_lean.csv): same rows as the full export, minus the
+ * six array-payload columns (ROC/PR curves, score histograms) no scalar
+ * aggregation can use. Loaded once at process start; there is no live W&B
+ * read path (Initial_plan.md §0).
  *
  * Column-form gotcha (carried in project memory): the CSV addresses axes as
  * `config/axes/<ID>_<Name>` (slash separator, space in the name, NO `.value`).
