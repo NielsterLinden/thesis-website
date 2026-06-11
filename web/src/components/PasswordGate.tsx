@@ -19,7 +19,7 @@ export function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
       if (err instanceof ApiError && err.status === 401) {
         setError('Wrong password.');
       } else if (err instanceof ApiError && err.status === 429) {
-        setError('Too many attempts — wait a minute and try again.');
+        setError('Too many attempts. Wait a minute and try again.');
       } else {
         setError('Could not reach the server. Is it running?');
       }
@@ -33,7 +33,7 @@ export function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
       <form className="gate-card" onSubmit={submit}>
         <h1>Unlock the assistant</h1>
         <p className="gate-sub">
-          Chat access is by shared password — each question spends real model tokens. The thesis PDF, code links,
+          Chat access is by shared password, since each question spends real model tokens. The thesis PDF, code links,
           and data downloads are open to everyone.
         </p>
         <input

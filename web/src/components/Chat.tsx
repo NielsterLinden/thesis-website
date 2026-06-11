@@ -81,7 +81,7 @@ export function Chat({
       if (err instanceof ApiError && err.status === 401) {
         onAuthExpired();
       } else if (err instanceof ApiError && err.status === 429) {
-        setError('Rate limited — wait a minute and try again.');
+        setError('Rate limited. Wait a minute and try again.');
       } else if (err instanceof ApiError) {
         setError(`Request failed (${err.status}): ${err.message}`);
       } else {
@@ -110,8 +110,8 @@ export function Chat({
         {messages.length === 0 && (
           <div className="chat-empty">
             <p>
-              Answers are grounded in the thesis TeX, the pinned code snapshot, and the frozen W&amp;B export — every
-              factual claim carries a citation you can verify.
+              Answers are grounded in the thesis TeX, the pinned code snapshot, and the frozen W&amp;B export, and
+              every factual claim carries a citation you can verify.
             </p>
             <div className="suggestions">
               {SUGGESTIONS.map((s) => (

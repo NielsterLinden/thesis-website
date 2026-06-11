@@ -18,10 +18,10 @@ function CitationChip({ href, meta }: { href: string; meta: SiteMeta | null }) {
   let title = body;
   if (kind === 'code') {
     url = codeCitationUrl(body, meta);
-    title = url ? `${body} — view at the pinned thesis-src commit` : body;
+    title = url ? `${body} (view at the pinned thesis-src commit)` : body;
   } else if (kind === 'thesis') {
     url = '/thesis.pdf';
-    title = `${body} — open the thesis PDF (search for the section name)`;
+    title = `${body}: open the thesis PDF (search for the section name)`;
   }
 
   const label = (
@@ -81,7 +81,7 @@ export function Message({
       </div>
       {msg.proposal && onSaveReport && <ReportConfirm proposal={msg.proposal} onSave={onSaveReport} />}
       {showUncited && (
-        <div className="msg-warning">No source citations in this reply — treat its factual claims with care.</div>
+        <div className="msg-warning">No source citations in this reply, so treat its factual claims with care.</div>
       )}
       {msg.meta?.capped && (
         <div className="msg-warning">

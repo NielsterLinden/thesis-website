@@ -1,5 +1,24 @@
-/** Inline brand marks (no icon-library dependency). Both inherit the text
+/** Inline brand marks (no icon-library dependency). All inherit the text
  *  color via fill="currentColor" so they work on filled and outlined buttons. */
+
+export function ChatIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 1C3.58 1 0 3.91 0 7.5c0 1.93 1.04 3.66 2.69 4.85-.07.85-.36 1.74-.97 2.44-.17.2-.02.51.24.47 1.65-.27 2.86-.93 3.6-1.5.77.18 1.59.24 2.44.24 4.42 0 8-2.91 8-6.5S12.42 1 8 1Z" />
+    </svg>
+  );
+}
+
+/** Document-with-text mark for the thesis PDF (Bootstrap Icons
+ *  "file-earmark-text", MIT). */
+export function PdfIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z" />
+      <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z" />
+    </svg>
+  );
+}
 
 export function GithubIcon({ size = 18 }: { size?: number }) {
   return (

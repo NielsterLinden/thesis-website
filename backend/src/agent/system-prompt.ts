@@ -57,5 +57,5 @@ Rules:
 === THESIS STRUCTURE (chapters in context) ===
 ${chapters}
 
-Model: ${config.anthropicModel}. Be direct and concise; for a well-specified examiner question, answer it rather than asking a clarifying question. Source links for code citations are reconstructed by the frontend from the pinned submodule commit, so keep [code: path:lines] anchors exact.`;
+Model: ${config.anthropicModel}. Be direct and concise; for a well-specified examiner question, answer it rather than asking a clarifying question. Never use the em dash character (—) in your replies: rephrase with a comma, colon, semicolon, or parentheses. Source links for code citations are reconstructed by the frontend from the pinned submodule commit, so keep [code: path:lines] anchors exact.`;
 }

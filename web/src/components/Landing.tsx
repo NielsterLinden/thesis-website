@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SiteMeta } from '../types';
 import { SUGGESTIONS } from './Chat';
-import { GithubIcon, WandbIcon } from './icons';
+import { ChatIcon, GithubIcon, PdfIcon, WandbIcon } from './icons';
 import { WandbModal } from './WandbModal';
 
 /** Prefilled question for the modal's "create your own report" path — routes
@@ -9,8 +9,8 @@ import { WandbModal } from './WandbModal';
  *  author_report proposes, the human confirms, a draft is saved). */
 const REPORT_PRIMER =
   'I would like to create my own W&B report from the frozen run database. ' +
-  'First give me a brief overview of what I can plot — the experiment axes I can filter and group by, ' +
-  'and the metrics available — then walk me through authoring one. ' +
+  'First give me a brief overview of what I can plot (the experiment axes I can filter and group by, ' +
+  'and the metrics available), then walk me through authoring one. ' +
   'I understand a draft is only saved after I explicitly confirm it.';
 
 /** Link to the pinned submodule snapshot, mirroring codeCitationUrl's
@@ -39,7 +39,7 @@ export function Landing({
         <section className="landing-hero">
           <h1>Hi!</h1>
           <p className="landing-intro">
-            This is the companion webapp to my thesis. The PDF is the distilled story — this site is the launching
+            This is the companion webapp to my thesis. The PDF is the distilled story; this site is the launching
             pad for everything behind it. From here you can:
           </p>
           <ul className="landing-caps">
@@ -47,7 +47,7 @@ export function Landing({
               <strong>Read the thesis</strong> right here in the browser.
             </li>
             <li>
-              <strong>Visit the codebase</strong> — the exact pinned snapshot the results were produced from.
+              <strong>Visit the codebase</strong>: the exact pinned snapshot the results were produced from.
             </li>
             <li>
               <strong>Browse every trained model</strong> in the Weights &amp; Biases run database, or download the
@@ -57,7 +57,7 @@ export function Landing({
               <strong>Open pre-made W&amp;B reports</strong> that explain the experiment axes and metrics.
             </li>
             <li>
-              <strong>Compose your own report</strong> over the frozen run data — drafted only after your explicit
+              <strong>Compose your own report</strong> over the frozen run data, drafted only after your explicit
               confirmation.
             </li>
             <li>
@@ -68,17 +68,22 @@ export function Landing({
         </section>
 
         <div className="landing-actions">
-          <button className="action action-primary" onClick={onOpenPdf}>
-            Read the thesis (PDF)
+          <button className="action action-primary action-chat" onClick={() => onOpenChat()}>
+            <ChatIcon /> Chat with the assistant
           </button>
-          {treeUrl && (
-            <a className="action action-secondary" href={treeUrl} target="_blank" rel="noreferrer">
-              <GithubIcon /> GitHub
-            </a>
-          )}
-          <button className="action action-secondary" onClick={() => setWandbOpen(true)}>
-            <WandbIcon /> Weights &amp; Biases
-          </button>
+          <div className="landing-actions-row">
+            <button className="action action-secondary" onClick={onOpenPdf}>
+              <PdfIcon /> Thesis PDF
+            </button>
+            {treeUrl && (
+              <a className="action action-secondary" href={treeUrl} target="_blank" rel="noreferrer">
+                <GithubIcon /> GitHub
+              </a>
+            )}
+            <button className="action action-secondary" onClick={() => setWandbOpen(true)}>
+              <WandbIcon /> Weights &amp; Biases
+            </button>
+          </div>
         </div>
 
         <section className="landing-section">
@@ -96,7 +101,7 @@ export function Landing({
           <h2>Grounded answers, not vibes</h2>
           <p>
             The assistant is not a generic chatbot. The full thesis TeX sits in its context, and every factual claim
-            is backed by a tool call over the pinned code snapshot or the frozen experiment export — and carries a
+            is backed by a tool call over the pinned code snapshot or the frozen experiment export, and carries a
             citation chip you can verify:
           </p>
           <p className="trust-chips">

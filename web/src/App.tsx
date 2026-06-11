@@ -62,7 +62,7 @@ export function App() {
           className="ghost"
           href="/runs.csv"
           download
-          title="Download the frozen W&B runs export (lean CSV — the exact data the agent queries)"
+          title="Download the frozen W&B runs export (lean CSV: the exact data the agent queries)"
         >
           Runs CSV
         </a>

@@ -55,7 +55,7 @@ export function WandbModal({
         <a className="modal-option" href="/runs.csv" download>
           <span className="modal-option-title">Download the raw data (CSV)</span>
           <span className="modal-option-desc">
-            1&thinsp;785 runs × 156 columns (2.7 MB) — the exact file the assistant queries; the bulky ROC/PR
+            1&thinsp;785 runs × 156 columns (2.7 MB), the exact file the assistant queries; the bulky ROC/PR
             curve arrays are excluded.
           </span>
         </a>

@@ -40,7 +40,7 @@ export function ReportConfirm({
 
   return (
     <div className="report-confirm">
-      <div className="report-confirm-head">Draft W&amp;B report — awaiting your confirmation</div>
+      <div className="report-confirm-head">Draft W&amp;B report: awaiting your confirmation</div>
       <pre className="report-confirm-summary">{proposal.summary}</pre>
 
       {state.phase === 'saved' ? (
@@ -48,13 +48,13 @@ export function ReportConfirm({
           Draft saved.{' '}
           <a href={state.url} target="_blank" rel="noreferrer">
             Open it in W&amp;B
-          </a>{' '}
-          — it stays a draft until you publish it there yourself.
+          </a>
+          . It stays a draft until you publish it there yourself.
         </div>
       ) : (
         <div className="report-confirm-actions">
           <button onClick={() => void confirm()} disabled={state.phase === 'saving'}>
-            {state.phase === 'saving' ? 'Saving draft…' : 'Confirm — save draft report'}
+            {state.phase === 'saving' ? 'Saving draft…' : 'Confirm and save draft report'}
           </button>
           <button
             className="ghost"
