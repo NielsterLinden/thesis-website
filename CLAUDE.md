@@ -2,9 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Status: greenfield
+## Status: backend done, frontend/Docker/deploy pending
 
-The repository currently contains only `Initial_plan.md` — the founding runbook for the whole site. There is no code, no submodule, no Dockerfile yet. Read `Initial_plan.md` before doing structural work; it is the source of truth for the architecture, file layout, build order, and deployment steps.
+Steps 1–3 of `Initial_plan.md` are built: repo scaffolding with the pinned `thesis-src` submodule, frozen CSV, and PDF (Step 1); the spend-capped Anthropic key in `.env` (Step 2); and the NestJS backend with the agent loop, auth guard, and the four MVP tools, with jest tests against the real frozen data (Step 3). Remaining: the React frontend (`web/` holds only `thesis.pdf` so far), the Dockerfile/compose, local acceptance checks, and the Render deploy. Read `Initial_plan.md` before doing structural work; it is the source of truth for the architecture, file layout, build order, and deployment steps.
+
+Implementation notes that refine the plan (discovered in Step 3): the thesis TeX is **not** a callable tool — the full TeX (~91k tokens, denser than the plan's 30–40k estimate) loads once into the cached `system` prefix, so the callable tools are `repo_grep`, `repo_read`, `wandb_query`, `axes_lookup`. The conversation-input cap counts `usage.input_tokens` only (cached prefix bills as cache reads, so the 91k prefix never trips the cap). Opus 4.7/4.8 reject `temperature`/`budget_tokens`; the loop uses adaptive thinking plus an effort knob (`ANTHROPIC_EFFORT`, default `high`). The Anthropic SDK must be ≥0.102 for those types. The live `/chat`→Anthropic round-trip has not yet been exercised (it spends real money — get the user's go-ahead first).
 
 ## What we are building
 
@@ -12,8 +14,9 @@ A password-gated companion site for a thesis (TeX + compiled PDF), its codebase,
 
 ```
 React (static) -> NestJS backend -> Anthropic API
-                       |
-                       +-- tools: thesis_context, repo_grep/read,
+                       |              (thesis TeX + axes reference live in
+                       |               the cached system prefix, not a tool)
+                       +-- tools: repo_grep/read,
                        |          wandb_query (frozen CSV), axes_lookup,
                        |          author_report (Phase 2)
                        |
