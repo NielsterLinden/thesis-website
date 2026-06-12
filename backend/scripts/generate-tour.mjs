@@ -61,7 +61,7 @@ const STOPS = [
     id: 'refusal',
     caption:
       'A question none of the three sources can answer. The contract requires a refusal, not a confident guess.',
-    question: 'What is the current exchange rate between the euro and the dollar?',
+    question: 'Is there a published journal paper based on this thesis?',
   },
 ];
 

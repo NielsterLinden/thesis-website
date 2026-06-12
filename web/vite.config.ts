@@ -14,6 +14,7 @@ export default defineConfig({
       '/meta': backend,
       '/health': backend,
       '/thesis.pdf': backend,
+      '/thesis-anchors.json': backend,
       '/runs.csv': backend,
       '/reports': backend,
     },

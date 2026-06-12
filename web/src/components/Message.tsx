@@ -9,6 +9,7 @@ import {
   countCitations,
   decodeCitation,
   rewriteCitations,
+  thesisCitationDest,
   thesisCitationUrl,
 } from '../citations';
 import { DisplayMessage, SiteMeta, ThesisAnchors } from '../types';
@@ -41,12 +42,14 @@ function CitationChip({
   meta,
   anchors,
   onShowQuery,
+  onOpenThesis,
   queryCitations,
 }: {
   href: string;
   meta: SiteMeta | null;
   anchors: ThesisAnchors | null;
   onShowQuery: (index: number) => void;
+  onOpenThesis?: (dest: string, label: string) => void;
   queryCitations: string[];
 }) {
   const cite = decodeCitation(href);
@@ -65,6 +68,22 @@ function CitationChip({
     url = codeCitationUrl(body, meta);
     title = url ? `${body} (view at the pinned thesis-src commit)` : body;
   } else if (kind === 'thesis') {
+    // Inside the chat the chip opens the inline panel at the cited location
+    // (reliable in every browser); elsewhere (the landing tour) it stays a
+    // new-tab deep link.
+    const dest = thesisCitationDest(body, anchors);
+    if (dest && onOpenThesis) {
+      return (
+        <button
+          type="button"
+          className="cite cite-thesis cite-action"
+          title={`${body}: show this location in the thesis panel`}
+          onClick={() => onOpenThesis(dest, body)}
+        >
+          {label}
+        </button>
+      );
+    }
     url = thesisCitationUrl(body, anchors);
     title = url.includes('#nameddest=')
       ? `${body}: open the thesis PDF at this location`
@@ -101,11 +120,13 @@ export function Message({
   meta,
   anchors,
   onSaveReport,
+  onOpenThesis,
 }: {
   msg: DisplayMessage;
   meta: SiteMeta | null;
   anchors: ThesisAnchors | null;
   onSaveReport?: (spec: unknown) => Promise<{ url: string }>;
+  onOpenThesis?: (dest: string, label: string) => void;
 }) {
   const panelRefs = useRef<(HTMLDetailsElement | null)[]>([]);
 
@@ -148,6 +169,7 @@ export function Message({
                     meta={meta}
                     anchors={anchors}
                     onShowQuery={showQuery}
+                    onOpenThesis={onOpenThesis}
                     queryCitations={queryCitations}
                   />
                 );

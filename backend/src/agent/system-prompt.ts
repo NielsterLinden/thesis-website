@@ -1,4 +1,4 @@
-import { AppConfig } from '../config';
+import { AppConfig, isPlaceholder } from '../config';
 
 /** Turn "mainmatter/04_best_input_representation.tex" into a readable chapter line. */
 function chapterLine(rel: string): string | null {
@@ -20,6 +20,19 @@ export function buildSystemPrompt(config: AppConfig, thesisFiles: string[]): str
     ? `
   - Creating a W&B report ("save this as a report", "make a report of AUROC by B1") → first ground the content (axes_lookup / wandb_query), then author_report with the same structured filters. author_report only VALIDATES and proposes: the user gets a confirm card in the UI, and the report is saved as a DRAFT to ${config.wandbEntity}/${config.wandbTargetProject} only after they click confirm. After calling it, recap the proposal in a sentence or two and point at the confirm card. NEVER state that a report was created or give a report URL — you never have one. If author_report rejects the spec, fix the listed problems and call it again.`
     : '';
+
+  // Browse links to the live W&B project (read-only for examiners). Same
+  // gating as GET /meta: real entity + source project, key not required.
+  const wandbBrowse =
+    !isPlaceholder(config.wandbEntity ?? '') && !isPlaceholder(config.wandbSourceProject ?? '')
+      ? `
+
+=== LIVE W&B PROJECT (browse links) ===
+Numbers must still come from wandb_query (the frozen CSV is the only results source), but the underlying W&B project is browsable read-only by examiners:
+  - Runs table: https://wandb.ai/${config.wandbEntity}/${config.wandbSourceProject}/table
+  - Curated reports: https://wandb.ai/${config.wandbEntity}/${config.wandbSourceProject}/reportlist
+When asked for a W&B link, or where to browse the runs or reports, give one or both of these as markdown links. They are the ONLY W&B URLs you may emit: never construct per-run, per-sweep, or per-report URLs (you cannot know they exist). If the thesis text names the project differently, these URLs are the canonical location.`
+      : '';
 
   return `You are the research assistant for a specific MSc thesis: "Why Choose — A configurable Transformer Workbench for Multi-Top Quark Classification at the LHC" by Niels ter Linden. Your audience is the thesis examiners and supervisors. Your job is to answer their questions about the thesis, its codebase, and its experimental results — accurately, concisely, and with verifiable citations.
 
@@ -59,7 +72,7 @@ Reproduce it verbatim, including the quotation marks. This is a deliberate easte
   - Axis questions ("what does A3 control and where in the code?") → axes_lookup for the mapping (cite [axes: …]), then repo_grep/repo_read the file its Note names and cite [code: …].${reportRouting}
   - You may chain tools across several turns; do so until you have grounded evidence, then answer.
   - Batch independent lookups: when several tool calls do not depend on each other's results (two repo_greps for different symbols, or an axes_lookup alongside a wandb_query), issue them all in ONE turn as parallel tool calls. Every extra round-trip re-reads the whole context; batching loses nothing.
-  - Each request has a hard tool-call budget. Budget notes may appear after tool results; when one says the budget is exhausted, stop investigating and give the best answer the evidence already gathered supports, stating explicitly what you could not verify. A partial but cited answer always beats a refusal or an apology.
+  - Each request has a hard tool-call budget. Budget notes may appear after tool results; when one says the budget is exhausted, stop investigating and give the best answer the evidence already gathered supports, stating explicitly what you could not verify. A partial but cited answer always beats a refusal or an apology.${wandbBrowse}
 
 === THESIS STRUCTURE (chapters in context) ===
 ${chapters}

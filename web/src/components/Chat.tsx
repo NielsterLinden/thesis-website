@@ -2,6 +2,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, postChatStream, saveReport } from '../api';
 import { DisplayMessage, PendingPrompt, SiteMeta, ThesisAnchors } from '../types';
 import { Message } from './Message';
+import { ThesisPanel, ThesisTarget } from './ThesisPanel';
 
 /** Seed questions mirroring the §9 acceptance checks, so a first-time
  *  examiner sees what each tool surface can do. Exported for the landing
@@ -53,7 +54,14 @@ export function Chat({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [thesisTarget, setThesisTarget] = useState<ThesisTarget | null>(null);
+  const thesisSeq = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  /** A [thesis: …] chip click: dock the inline viewer at the cited location. */
+  function openThesis(dest: string, label: string) {
+    setThesisTarget({ dest, label, seq: ++thesisSeq.current });
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -141,8 +149,9 @@ export function Chat({
   }
 
   return (
-    <div className="chat">
-      <div className="chat-scroll" ref={scrollRef}>
+    <div className="chat-wrap">
+      <div className="chat">
+        <div className="chat-scroll" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="chat-empty">
             <p>
@@ -159,7 +168,14 @@ export function Chat({
           </div>
         )}
         {messages.map((m, i) => (
-          <Message key={i} msg={m} meta={meta} anchors={anchors} onSaveReport={(spec) => saveReport(spec, password)} />
+          <Message
+            key={i}
+            msg={m}
+            meta={meta}
+            anchors={anchors}
+            onSaveReport={(spec) => saveReport(spec, password)}
+            onOpenThesis={openThesis}
+          />
         ))}
         {busy && (
           <div className="msg msg-assistant">
@@ -217,6 +233,8 @@ export function Chat({
           </button>
         </div>
       </form>
+      </div>
+      {thesisTarget && <ThesisPanel target={thesisTarget} onClose={() => setThesisTarget(null)} />}
     </div>
   );
 }

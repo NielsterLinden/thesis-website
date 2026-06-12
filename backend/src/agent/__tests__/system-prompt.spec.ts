@@ -5,6 +5,7 @@ const baseConfig = {
   anthropicModel: 'claude-test-model',
   reportsEnabled: false,
   wandbEntity: 'test-entity',
+  wandbSourceProject: '',
   wandbTargetProject: 'thesis-visitor-reports',
 } as AppConfig;
 
@@ -32,6 +33,17 @@ describe('buildSystemPrompt', () => {
   it('tells the model a budget-exhausted note means answer from gathered evidence', () => {
     expect(prompt).toContain('hard tool-call budget');
     expect(prompt).toContain('beats a refusal');
+  });
+
+  it('only offers W&B browse links when entity + source project are real', () => {
+    expect(prompt).not.toContain('LIVE W&B PROJECT');
+    const configured = buildSystemPrompt(
+      { ...baseConfig, wandbSourceProject: 'thesis-ml' } as AppConfig,
+      thesisFiles,
+    );
+    expect(configured).toContain('https://wandb.ai/test-entity/thesis-ml/table');
+    expect(configured).toContain('https://wandb.ai/test-entity/thesis-ml/reportlist');
+    expect(configured).toContain('never construct per-run');
   });
 
   it('only advertises report authoring when Phase 2 is enabled', () => {

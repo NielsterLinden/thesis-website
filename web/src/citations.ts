@@ -68,13 +68,12 @@ export function countCitations(markdown: string): number {
 
 const THESIS_PDF = '/thesis.pdf';
 
-/** `§4.2, Eq. (4.7)` / `Fig. 4.3` / `fig:intro_sm_particles` → a #nameddest
- *  deep link into /thesis.pdf, via the anchor map served from the pinned
+/** `§4.2, Eq. (4.7)` / `Fig. 4.3` / `fig:intro_sm_particles` → the hyperref
+ *  named destination in /thesis.pdf, via the anchor map served from the pinned
  *  submodule's LaTeX build artifacts. The body may carry several anchors;
- *  the first one that resolves wins. Falls back to the plain PDF URL (today's
- *  behavior — also what Safari does with any PDF fragment). */
-export function thesisCitationUrl(body: string, anchors: ThesisAnchors | null): string {
-  if (!anchors) return THESIS_PDF;
+ *  the first one that resolves wins. Null when nothing resolves. */
+export function thesisCitationDest(body: string, anchors: ThesisAnchors | null): string | null {
+  if (!anchors) return null;
   const candidates: { index: number; key: string }[] = [];
   const collect = (re: RegExp, toKey: (m: RegExpExecArray | RegExpMatchArray) => string) => {
     for (const m of body.matchAll(re)) candidates.push({ index: m.index ?? 0, key: toKey(m) });
@@ -98,9 +97,17 @@ export function thesisCitationUrl(body: string, anchors: ThesisAnchors | null): 
   candidates.sort((a, b) => a.index - b.index);
   for (const c of candidates) {
     const dest = anchors[c.key];
-    if (dest) return `${THESIS_PDF}#nameddest=${encodeURIComponent(dest)}`;
+    if (dest) return dest;
   }
-  return THESIS_PDF;
+  return null;
+}
+
+/** New-tab fallback URL for a thesis citation: a #nameddest deep link when the
+ *  body resolves, the plain PDF otherwise (also what Safari does with any PDF
+ *  fragment — it ignores them and opens page 1). */
+export function thesisCitationUrl(body: string, anchors: ThesisAnchors | null): string {
+  const dest = thesisCitationDest(body, anchors);
+  return dest ? `${THESIS_PDF}#nameddest=${encodeURIComponent(dest)}` : THESIS_PDF;
 }
 
 /** `path/to/file.py:42-58` → GitHub blob URL at the pinned submodule commit.
