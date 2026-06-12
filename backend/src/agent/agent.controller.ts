@@ -1,15 +1,27 @@
-import { BadRequestException, Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { BadRequestException, Body, Controller, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { SitePasswordGuard } from '../auth/site-password.guard';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { logRequest } from '../telemetry';
-import { AgentService, ChatMessage } from './agent.service';
+import { AgentService, ChatMessage, ChatResult } from './agent.service';
 import { ChatResponseDto } from './dto';
 
 const MAX_MESSAGES = 200;
 const MAX_CONTENT_CHARS = 100_000;
 
 type ReqWithMeta = Request & { requestId?: string; startTime?: number };
+
+function toResponseDto(result: ChatResult): ChatResponseDto {
+  return {
+    answer: result.answer,
+    stop_reason: result.stop_reason,
+    tool_calls: result.tool_calls,
+    usage: result.usage,
+    capped: result.capped,
+    report_proposal: result.report_proposal,
+    query_results: result.query_results,
+  };
+}
 
 @Controller()
 export class AgentController {
@@ -32,10 +44,62 @@ export class AgentController {
 
     const result = await this.agent.chat(messages);
 
+    this.logSuccess(result, requestId, req.path, start);
+    return toResponseDto(result);
+  }
+
+  /**
+   * POST /chat/stream — the same gated agent turn, but the response is
+   * newline-delimited JSON: one progress event per tool dispatch (so the
+   * frontend can narrate what the agent is doing), then a terminal
+   * {type:"final", result} line carrying exactly the /chat payload. A plain
+   * fetch+getReader client consumes it; the password header works because this
+   * is not EventSource. /chat itself stays untouched as the stable contract.
+   */
+  @Post('chat/stream')
+  @UseGuards(RateLimitGuard, SitePasswordGuard)
+  async chatStream(@Body() body: unknown, @Req() req: ReqWithMeta, @Res() res: Response): Promise<void> {
+    const requestId = req.requestId ?? 'unknown';
+    const start = req.startTime ?? Date.now();
+
+    // Validate BEFORE any byte is written: a thrown BadRequestException still
+    // becomes a normal 400 while the response is untouched.
+    const messages = this.validate(body, requestId, req.path);
+
+    res.status(200);
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no'); // proxy buffering would defeat the stream
+    res.flushHeaders();
+    const write = (obj: unknown) => res.write(`${JSON.stringify(obj)}\n`);
+
+    try {
+      const result = await this.agent.chat(messages, (event) => write(event));
+      this.logSuccess(result, requestId, req.path, start);
+      write({ type: 'final', result: toResponseDto(result) });
+    } catch (err) {
+      // Headers are already sent, so signal the failure in-band.
+      logRequest({
+        request_id: requestId,
+        ts: new Date().toISOString(),
+        route: req.path,
+        auth_ok: true,
+        status: 500,
+        duration_ms: Date.now() - start,
+        note: 'stream_error',
+      });
+      const message = err instanceof Error ? err.message : 'The agent turn failed.';
+      write({ type: 'error', message });
+    } finally {
+      res.end();
+    }
+  }
+
+  private logSuccess(result: ChatResult, requestId: string, route: string, start: number): void {
     logRequest({
       request_id: requestId,
       ts: new Date().toISOString(),
-      route: req.path,
+      route,
       auth_ok: true,
       status: 200,
       duration_ms: Date.now() - start,
@@ -46,15 +110,6 @@ export class AgentController {
       cache_creation_input_tokens: result.usage.cache_creation_input_tokens,
       capped: result.capped,
     });
-
-    return {
-      answer: result.answer,
-      stop_reason: result.stop_reason,
-      tool_calls: result.tool_calls,
-      usage: result.usage,
-      capped: result.capped,
-      report_proposal: result.report_proposal,
-    };
   }
 
   private validate(body: unknown, requestId: string, route: string): ChatMessage[] {

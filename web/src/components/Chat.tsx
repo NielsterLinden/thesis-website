@@ -1,6 +1,6 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { ApiError, postChat, saveReport } from '../api';
-import { DisplayMessage, PendingPrompt, SiteMeta } from '../types';
+import { ApiError, postChatStream, saveReport } from '../api';
+import { DisplayMessage, PendingPrompt, SiteMeta, ThesisAnchors } from '../types';
 import { Message } from './Message';
 
 /** Seed questions mirroring the §9 acceptance checks, so a first-time
@@ -13,14 +13,36 @@ export const SUGGESTIONS = [
   'What does A3 control, and where in the code is it implemented?',
 ];
 
+/** Serialize the conversation to a self-contained markdown document. The
+ *  citation tokens stay verbatim plain text (rewriteCitations only touches
+ *  the rendered view), so an exported transcript remains verifiable. */
+function toMarkdown(messages: DisplayMessage[]): string {
+  const lines: string[] = ['# Thesis Companion conversation', '', `_Exported ${new Date().toLocaleString()}_`];
+  for (const m of messages) {
+    lines.push('', m.role === 'user' ? '## You' : '## Assistant', '', m.content);
+    if (m.meta) {
+      const tools = m.meta.tool_calls.length > 0 ? m.meta.tool_calls.join(', ') : 'none';
+      lines.push(
+        '',
+        `> tools: ${tools} · ${m.meta.usage.input_tokens.toLocaleString()} tokens in / ` +
+          `${m.meta.usage.output_tokens.toLocaleString()} out${m.meta.capped ? ' · capped' : ''}`,
+      );
+    }
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 export function Chat({
   meta,
+  anchors,
   password,
   onAuthExpired,
   pendingPrompt,
   onPromptConsumed,
 }: {
   meta: SiteMeta | null;
+  anchors: ThesisAnchors | null;
   password: string;
   onAuthExpired: () => void;
   pendingPrompt: PendingPrompt | null;
@@ -29,12 +51,13 @@ export function Chat({
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, busy]);
+  }, [messages, busy, progress]);
 
   // Consume a landing-page question exactly once. The seq guard (not just a
   // null check) is load-bearing: StrictMode runs mount effects twice in dev,
@@ -60,10 +83,12 @@ export function Chat({
     const next: DisplayMessage[] = [...messages, { role: 'user', content: question }];
     setMessages(next);
     setBusy(true);
+    setProgress([]);
     try {
-      const res = await postChat(
+      const res = await postChatStream(
         next.map(({ role, content }) => ({ role, content })),
         password,
+        (event) => setProgress((p) => [...p, event.detail].slice(-6)),
       );
       setMessages([
         ...next,
@@ -72,6 +97,7 @@ export function Chat({
           content: res.answer,
           meta: { tool_calls: res.tool_calls, usage: res.usage, capped: res.capped },
           proposal: res.report_proposal ?? undefined,
+          queryResults: res.query_results && res.query_results.length > 0 ? res.query_results : undefined,
         },
       ]);
     } catch (err) {
@@ -89,7 +115,17 @@ export function Chat({
       }
     } finally {
       setBusy(false);
+      setProgress([]);
     }
+  }
+
+  function exportMarkdown() {
+    const blob = new Blob([toMarkdown(messages)], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `thesis-companion-chat-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   function onSubmit(e: FormEvent) {
@@ -123,11 +159,20 @@ export function Chat({
           </div>
         )}
         {messages.map((m, i) => (
-          <Message key={i} msg={m} meta={meta} onSaveReport={(spec) => saveReport(spec, password)} />
+          <Message key={i} msg={m} meta={meta} anchors={anchors} onSaveReport={(spec) => saveReport(spec, password)} />
         ))}
         {busy && (
           <div className="msg msg-assistant">
             <div className="msg-body thinking">Consulting the sources…</div>
+            {progress.length > 0 && (
+              <ul className="progress-log">
+                {progress.map((p, i) => (
+                  <li key={i} className={i === progress.length - 1 ? 'progress-current' : undefined}>
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
         {error && <div className="chat-error">{error}</div>}
@@ -153,6 +198,17 @@ export function Chat({
               }}
             >
               New conversation
+            </button>
+          )}
+          {messages.length > 0 && (
+            <button
+              type="button"
+              className="ghost"
+              disabled={busy}
+              onClick={exportMarkdown}
+              title="Download this conversation as a markdown file (citation tokens included verbatim)"
+            >
+              Export .md
             </button>
           )}
           <span className="spacer" />

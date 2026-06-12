@@ -1,4 +1,4 @@
-import { SiteMeta } from './types';
+import { SiteMeta, ThesisAnchors } from './types';
 
 /**
  * The citation contract (Initial_plan.md §0, backend system prompt): the model
@@ -64,6 +64,43 @@ export function countCitations(markdown: string): number {
     n += [...segment.matchAll(TOKEN_RE)].length;
   }
   return n;
+}
+
+const THESIS_PDF = '/thesis.pdf';
+
+/** `§4.2, Eq. (4.7)` / `Fig. 4.3` / `fig:intro_sm_particles` → a #nameddest
+ *  deep link into /thesis.pdf, via the anchor map served from the pinned
+ *  submodule's LaTeX build artifacts. The body may carry several anchors;
+ *  the first one that resolves wins. Falls back to the plain PDF URL (today's
+ *  behavior — also what Safari does with any PDF fragment). */
+export function thesisCitationUrl(body: string, anchors: ThesisAnchors | null): string {
+  if (!anchors) return THESIS_PDF;
+  const candidates: { index: number; key: string }[] = [];
+  const collect = (re: RegExp, toKey: (m: RegExpExecArray | RegExpMatchArray) => string) => {
+    for (const m of body.matchAll(re)) candidates.push({ index: m.index ?? 0, key: toKey(m) });
+  };
+  // §4.2 / Section 4.2 / Ch. 3 / Appendix A.1 — keys are the bare numbers
+  // (digits-dotted, or an appendix letter optionally followed by .digits).
+  const NUM = String.raw`[A-Z](?:\.\d+)*|\d+(?:\.\d+)*`;
+  collect(new RegExp(String.raw`§\s*(${NUM})`, 'g'), (m) => m[1]);
+  collect(
+    new RegExp(String.raw`\b(?:ch(?:apter)?|sec(?:tion)?|app(?:endix)?)\.?\s+(${NUM})`, 'gi'),
+    // The map's appendix keys are uppercase letters; normalize "appendix a.1".
+    (m) => (/^[a-z]/.test(m[1]) ? m[1].toUpperCase() : m[1]),
+  );
+  // Eq. (4.7) / Equation 4.7 / Fig. 4.3 / Table 4.1 — numbers live under a prefix.
+  collect(/\beq(?:uation)?s?\.?\s*\(?(\d+(?:\.\d+)*)\)?/gi, (m) => `eq:${m[1]}`);
+  collect(/\bfig(?:ure)?s?\.?\s*(\d+(?:\.\d+)*)/gi, (m) => `fig:${m[1]}`);
+  collect(/\btab(?:le)?s?\.?\s*(\d+(?:\.\d+)*)/gi, (m) => `tab:${m[1]}`);
+  // \label form (fig:intro_sm_particles, sec:…, eq:…, chapter:…) — verbatim keys.
+  collect(/\b([a-z]+:[A-Za-z0-9_:-]+)/g, (m) => m[1]);
+
+  candidates.sort((a, b) => a.index - b.index);
+  for (const c of candidates) {
+    const dest = anchors[c.key];
+    if (dest) return `${THESIS_PDF}#nameddest=${encodeURIComponent(dest)}`;
+  }
+  return THESIS_PDF;
 }
 
 /** `path/to/file.py:42-58` → GitHub blob URL at the pinned submodule commit.

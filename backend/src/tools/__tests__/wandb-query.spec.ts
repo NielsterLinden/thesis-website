@@ -63,6 +63,39 @@ describe('WandbQueryTool (synthetic, deterministic)', () => {
     expect(res.content).toContain('agg=median');
   });
 
+  it('attaches a structured queryResult mirroring the text content (frontend side channel)', async () => {
+    const res = await tool.execute({
+      metric: 'test_auroc',
+      filters: [{ field: 'H10', op: '==', value: 'd256_L6' }],
+      groupby: 'B1',
+      agg: 'median',
+    });
+    const qr = res.queryResult;
+    expect(qr).toBeDefined();
+    expect(qr!.metric).toBe(AUROC);
+    expect(qr!.agg).toBe('median');
+    expect(qr!.groupby).toEqual(['B1']);
+    expect(qr!.filters).toEqual([{ field: 'H10', op: '==', value: 'd256_L6' }]);
+    expect(qr!.matching_runs).toBe(6);
+    expect(qr!.truncated_groups).toBe(0);
+    expect(qr!.groups).toEqual([
+      { key: 'gelu', value: 0.81, n: 2, skipped: 0 },
+      { key: 'none', value: 0.92, n: 3, skipped: 1 },
+    ]);
+    // The attached citation is byte-identical to the token in the text — the
+    // frontend matches the model's chip against it.
+    expect(res.content.trim().endsWith(qr!.citation)).toBe(true);
+  });
+
+  it('attaches no queryResult when nothing matches (nothing to visualize)', async () => {
+    const res = await tool.execute({
+      metric: 'test_auroc',
+      filters: [{ field: 'H10', op: '==', value: 'no_such_model' }],
+    });
+    expect(res.isError).toBeFalsy();
+    expect(res.queryResult).toBeUndefined();
+  });
+
   it('rejects an unknown operator (structured triples only, no eval path)', async () => {
     const res = await tool.execute({
       metric: 'test_auroc',

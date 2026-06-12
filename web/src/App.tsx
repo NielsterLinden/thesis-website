@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { clearStoredPassword, fetchMeta, getStoredPassword } from './api';
+import { clearStoredPassword, fetchMeta, fetchThesisAnchors, getStoredPassword } from './api';
 import { Chat } from './components/Chat';
 import { Landing } from './components/Landing';
 import { PasswordGate } from './components/PasswordGate';
 import { PdfView } from './components/PdfView';
-import { PendingPrompt, SiteMeta } from './types';
+import { PendingPrompt, SiteMeta, ThesisAnchors } from './types';
 
 type View = 'home' | 'chat' | 'pdf';
 
@@ -12,11 +12,13 @@ export function App() {
   const [password, setPassword] = useState<string | null>(getStoredPassword());
   const [view, setView] = useState<View>('home');
   const [meta, setMeta] = useState<SiteMeta | null>(null);
+  const [anchors, setAnchors] = useState<ThesisAnchors | null>(null);
   const [pendingPrompt, setPendingPrompt] = useState<PendingPrompt | null>(null);
   const promptSeq = useRef(0);
 
   useEffect(() => {
     void fetchMeta().then(setMeta);
+    void fetchThesisAnchors().then(setAnchors);
   }, []);
 
   /** Enter the chat, optionally queueing a question from the landing page.
@@ -80,12 +82,13 @@ export function App() {
           nor drops the in-memory conversation. */}
       <main className="content">
         <div style={{ display: view === 'home' ? 'contents' : 'none' }}>
-          <Landing meta={meta} onOpenChat={openChat} onOpenPdf={() => setView('pdf')} />
+          <Landing meta={meta} anchors={anchors} onOpenChat={openChat} onOpenPdf={() => setView('pdf')} />
         </div>
         <div style={{ display: view === 'chat' ? 'contents' : 'none' }}>
           {password ? (
             <Chat
               meta={meta}
+              anchors={anchors}
               password={password}
               onAuthExpired={expire}
               pendingPrompt={pendingPrompt}

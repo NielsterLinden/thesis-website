@@ -28,6 +28,39 @@ export interface ToolResult {
    * never relays (and so can never mutate) what gets saved (§6.3).
    */
   proposal?: import('../reports/spec').ReportProposal;
+  /**
+   * wandb_query side channel (same pattern as `proposal`): the aggregate the
+   * tool computed, captured by the agent loop and shipped to the frontend
+   * outside the model's text, where it renders as a verifiable table + chart
+   * under the answer. The text `content` the model sees is unchanged.
+   */
+  queryResult?: WandbQueryResultData;
+}
+
+/** One aggregated group of a wandb_query result (key is null when the query
+ *  had no groupby and aggregated over all matching runs). */
+export interface WandbQueryGroup {
+  key: string | null;
+  value: number;
+  n: number;
+  skipped: number;
+}
+
+export interface WandbQueryResultData {
+  /** Human-readable header, e.g. "median of eval_v2/test_auroc grouped by B1 …". */
+  title: string;
+  /** Resolved metric column ('' when agg === 'count'). */
+  metric: string;
+  agg: string;
+  /** Groupby fields as the caller named them (axis IDs or columns). */
+  groupby: string[];
+  filters: { field: string; op: string; value: unknown }[];
+  groups: WandbQueryGroup[];
+  matching_runs: number;
+  /** Groups beyond the tool's display cap (shown count excludes these). */
+  truncated_groups: number;
+  /** The exact [wandb: …] token the tool returned, for chip <-> panel matching. */
+  citation: string;
 }
 
 export interface Tool {

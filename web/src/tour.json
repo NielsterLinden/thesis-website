@@ -1,0 +1,169 @@
+{
+  "generated_at": "2026-06-12T14:28:42.020Z",
+  "model": null,
+  "items": [
+    {
+      "id": "thesis",
+      "question": "Summarize the input-representation chapter.",
+      "caption": "A thesis-content question, answered from the TeX in context. The chips deep-link into the PDF.",
+      "answer": "# Summary of Chapter 4: Input Representation\n\n[thesis: §4, Eq. (4.7)]\n\nChapter 4 investigates six design choices that determine what information the transformer receives before processing: the tokenizer family, particle-identity embedding parameters, the kinematic feature set, missing transverse energy (MET) treatment, and token ordering.\n\n## Key Findings\n\n**Tokenizer family dominates:** The chapter's headline result is that the explicit particle-identity embedding of the `identity` tokenizer outperforms the kinematics-only `raw` family by **+0.038 AUROC** and the discretised `binned` family by **+0.047 AUROC** [thesis: §4.2, Fig. 4.1]. This gap is approximately 40 times the per-seed standard deviation and is robust across the full operating range of the ROC curve.\n\n**PID encoding sub-axes are null:** Within the `identity` family, neither the embedding mode (`T1-a`: one-hot, fixed-random, or learned) nor the embedding dimension (`T1-b`: 8, 16, or 32) carries a measurable effect, all cells converge within seed variance (~0.004 AUROC spread) [thesis: §4.3]. The one-hot mode is adopted as the chapter baseline because it is parameter-free and mathematically equivalent to the learned embeddings when passed through the first linear layer.\n\n**Data-treatment axes are near-null:** Removing energy from the feature set (`D1`), including MET as a token (`D2`), and shuffling the input token order (`D3`) all produce negligible AUROC changes (< 0.001 absolute) [thesis: §4.4, Table 4.1]. The small in-direction effect of token shuffling (~–0.0026) is suggestive but not robust at n=3 seeds.\n\n**Per-event origin:** The PID advantage is not localized to a specific event topology; the gap is distributed broadly across phase space. PID-helped and PID-hurt populations are kinematically indistinguishable in particle multiplicity, b-jet fractions, and aggregate kinematics [thesis: §4.2.3, Fig. 4.5].\n\n## Methodology\n\nThe chapter runs two independent sweeps on a fixed \\texttt{d64\\_L4} encoder:\n- **Experiment 4A** exercises the three tokenizer families and the identity-family sub-axis grid (33 runs, 3 seeds)\n- **Experiment 4B** runs a full 2³ factorial over D1, D2, D3 (24 runs, 3 seeds)\n\n## Input-Representation Baseline Carried Forward\n\nThe winning configuration for subsequent chapters is:\n- Tokenizer: `identity` with one-hot PID mode\n- Features: [E, pT, η, φ] (all four kinematics)\n- MET: not included as a token (`D2 = false`)\n- Token order: dataset input order (approximate pT-sorting)\n\n[thesis: §4.5]",
+      "tool_calls": [],
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 710,
+        "cache_read_input_tokens": 107018,
+        "cache_creation_input_tokens": 0
+      },
+      "query_results": []
+    },
+    {
+      "id": "code",
+      "question": "How is the FFN type resolved between standard, KAN, and MoE?",
+      "caption": "A code question, answered by grepping and reading the pinned snapshot, never from memory.",
+      "answer": "The FFN type is resolved through a **priority rule** implemented in the `build_ffn` factory function [code: src/thesis_ml/architectures/transformer_classifier/modules/ffn/__init__.py:25-107].\n\nThe resolution follows this hierarchy:\n\n1. **MoE takes highest priority** (lines 67–81): If `moe_cfg` is present and `moe_cfg[\"enabled\"]` is `True`, a `MoEFFN` module is returned **regardless of the `ffn_type` setting**. The comment on line 66 explicitly states \"MoE takes priority (backward compat)\".\n\n2. **KAN is checked second** (lines 83–98): If `ffn_type == \"kan\"` and MoE was not enabled, a `KANFFN` module is returned.\n\n3. **Standard MLP is the default** (lines 100–106): Otherwise, a `StandardFFN` module is returned.\n\nThis means that if you set both `moe.enabled = true` and `ffn.type = kan`, the MoE FFN will be used, and the KAN setting is effectively ignored. The thesis documents this as the [thesis: §3, Dependency rules and valid configurations, \"FFN priority rule\"] constraint, which states: **\"MoE > KAN > standard priority\"**.\n\nThe two configuration keys that control this are:\n- `classifier.model.moe.enabled` (boolean)\n- `classifier.model.ffn.type` (string: \"standard\" or \"kan\")\n\nBoth values are logged independently to W&B (`axes/moe_enabled` and `axes/ffn_type`) so the actual decision made by the priority rule can be reconstructed, but the **effective FFN realization** is determined solely by the priority order above [code: src/thesis_ml/architectures/transformer_classifier/modules/ffn/__init__.py:1-12].",
+      "tool_calls": [
+        "repo_grep",
+        "repo_grep",
+        "repo_read"
+      ],
+      "usage": {
+        "input_tokens": 17,
+        "output_tokens": 789,
+        "cache_read_input_tokens": 433824,
+        "cache_creation_input_tokens": 5459
+      },
+      "query_results": []
+    },
+    {
+      "id": "wandb",
+      "question": "What is the median test AUROC for the d256_L6 baseline, grouped by B1?",
+      "caption": "A results question over the frozen W&B export. The table below the answer is the exact aggregate the model saw; click the [wandb: …] chip to reveal it.",
+      "answer": "The median test AUROC for the d256_L6 baseline, grouped by B1 (physics-informed attention bias families), is:\n\n| B1 Configuration | Median AUROC | N (seeds) |\n|---|---|---|\n| (blank/null) | 0.7246 | 3 |\n| none | **0.8328** | 166 |\n| lorentz_scalar | 0.8316 | 156 |\n| sm_interaction | 0.8305 | 24 |\n| typepair_kinematic | 0.8309 | 36 |\n| global_conditioned | 0.8294 | 6 |\n| all four combined | 0.8272 | 6 |\n\n[wandb: H10==\"d256_L6\", groupby=B1, metric=eval_v2/test_auroc, agg=median]\n\nThe unbiased baseline (B1 = `none`) achieves the highest median AUROC of 0.8328. The individual bias families (`lorentz_scalar`, `sm_interaction`, `typepair_kinematic`) all perform within ~0.001 AUROC of this baseline, while the combination of all four families slightly underperforms at 0.8272. This is consistent with the thesis finding that physics-informed attention biases do not shift AUROC measurably at this model scale [thesis: §5, Exp. 5A].",
+      "tool_calls": [
+        "wandb_query"
+      ],
+      "usage": {
+        "input_tokens": 7,
+        "output_tokens": 500,
+        "cache_read_input_tokens": 214064,
+        "cache_creation_input_tokens": 402
+      },
+      "query_results": [
+        {
+          "title": "median of eval_v2/test_auroc grouped by B1 where H10==d256_L6 (410 matching runs)",
+          "metric": "eval_v2/test_auroc",
+          "agg": "median",
+          "groupby": [
+            "B1"
+          ],
+          "filters": [
+            {
+              "field": "H10",
+              "op": "==",
+              "value": "d256_L6"
+            }
+          ],
+          "groups": [
+            {
+              "key": "(blank)",
+              "value": 0.7245825007777754,
+              "n": 3,
+              "skipped": 0
+            },
+            {
+              "key": "global_conditioned",
+              "value": 0.829448909159223,
+              "n": 6,
+              "skipped": 0
+            },
+            {
+              "key": "lorentz_scalar",
+              "value": 0.8315861457323482,
+              "n": 156,
+              "skipped": 0
+            },
+            {
+              "key": "lorentz_scalar+typepair_kinematic+sm_interaction+global_conditioned",
+              "value": 0.8272227272465007,
+              "n": 6,
+              "skipped": 0
+            },
+            {
+              "key": "none",
+              "value": 0.8328464308252952,
+              "n": 166,
+              "skipped": 11
+            },
+            {
+              "key": "sm_interaction",
+              "value": 0.8304666661764577,
+              "n": 24,
+              "skipped": 0
+            },
+            {
+              "key": "typepair_kinematic",
+              "value": 0.8309128024658394,
+              "n": 36,
+              "skipped": 2
+            }
+          ],
+          "matching_runs": 410,
+          "truncated_groups": 0,
+          "citation": "[wandb: H10==\"d256_L6\", groupby=B1, metric=eval_v2/test_auroc, agg=median]"
+        }
+      ]
+    },
+    {
+      "id": "axes",
+      "question": "What does A3 control, and where in the code is it implemented?",
+      "caption": "An experiment-axis question: alias -> config key -> implementing code, with both cited.",
+      "answer": "## What A3 Controls\n\n[axes: A3 = `classifier.model.attention.type` (AXES_REFERENCE_V2.md)]\n\n**A3** controls the attention mechanism type used in the transformer encoder. It has two options:\n- `standard`: Uses the traditional scaled dot-product self-attention (one softmax per head)\n- `differential`: Uses differential attention, which computes the difference of two softmax maps to suppress diffuse attention noise\n\n[code: src/thesis_ml/architectures/transformer_classifier/modules/attention/differential.py:1-24] describes differential attention as computing:\n$$A = \\mathrm{softmax}(Q_1 K_1^T / \\sqrt{d}) - \\lambda \\cdot \\mathrm{softmax}(Q_2 K_2^T / \\sqrt{d})$$\n\nwhere the per-head learnable scalar $\\lambda$ weights how strongly the second softmax is subtracted from the first. This is designed to cancel shared, non-discriminating attention patterns before they propagate into the value mix.\n\n[code: src/thesis_ml/architectures/transformer_classifier/modules/attention/standard.py:27-44] implements the baseline `MultiHeadAttention` class, which performs standard scaled dot-product attention with optional per-head normalization and rotary positional embeddings.\n\n## Where It Is Implemented\n\nThe choice between the two attention types is resolved in [code: src/thesis_ml/architectures/transformer_classifier/modules/encoder_block.py:105], where a conditional statement (`if attention_type == \"differential\"`) selects which attention module is instantiated.\n\nThe two attention implementations live in separate modules:\n- Standard attention: [code: src/thesis_ml/architectures/transformer_classifier/modules/attention/standard.py]\n- Differential attention: [code: src/thesis_ml/architectures/transformer_classifier/modules/attention/differential.py]\n\nBoth classes share the same forward signature for drop-in compatibility. A3 is also coupled to a sub-axis [code: src/thesis_ml/architectures/transformer_classifier/modules/attention/differential.py:61] (**A3-a**, `diff_bias_mode`) that controls how physics-informed attention biases (B1) route through the two differential softmax branches (`none` / `shared` / `split`).",
+      "tool_calls": [
+        "axes_lookup",
+        "repo_grep",
+        "repo_grep",
+        "repo_read",
+        "repo_read",
+        "repo_grep"
+      ],
+      "usage": {
+        "input_tokens": 15,
+        "output_tokens": 1139,
+        "cache_read_input_tokens": 433131,
+        "cache_creation_input_tokens": 4889
+      },
+      "query_results": []
+    },
+    {
+      "id": "math",
+      "question": "Quote the differential attention equation from the thesis and briefly explain each term.",
+      "caption": "Equations are quoted from the TeX and rendered.",
+      "answer": "Here is the differential attention equation from the thesis [thesis: §6, Eq. (6.1)]:\n\n$$\\mathrm{DiffAttn}_h(Q, K, V) = \\left[\\mathrm{softmax}\\!\\left(\\frac{Q_{h,1} K_{h,1}^\\top}{\\sqrt{d_h}}\\right) - \\lambda_h \\, \\mathrm{softmax}\\!\\left(\\frac{Q_{h,2} K_{h,2}^\\top}{\\sqrt{d_h}}\\right)\\right] V_h$$\n\n**Explanation of each term:**\n\n- $Q_{h,1}, K_{h,1}, Q_{h,2}, K_{h,2}$: The query and key projections for a single attention head are **split into two equal halves** of dimension $d_h$ each.\n\n- $\\mathrm{softmax}\\left(\\frac{Q_{h,1} K_{h,1}^\\top}{\\sqrt{d_h}}\\right)$ and $\\mathrm{softmax}\\left(\\frac{Q_{h,2} K_{h,2}^\\top}{\\sqrt{d_h}}\\right)$: Two independent **softmax attention maps** formed from the two query-key halves, scaled by $\\sqrt{d_h}$ for stability.\n\n- $\\lambda_h$: A **per-head learnable scalar** that weights the strength of the second softmax map before subtraction. The optimiser can drive this towards zero to recover standard attention, or towards unity to maximally suppress shared patterns.\n\n- The **difference** of the two maps: By subtracting one softmax from the other, any attention pattern shared between the two branches is cancelled, leaving net weight only on pairs that distinguish the two branches.\n\n- $V_h$: The full-dimension **value projection**, which mixes the refined attention map into the token representation.\n\nThe core insight is that this acts as a \"differential amplifier\", diffuse, non-discriminating attention patterns that are present in both branches cancel out, concentrating weight on the token pairs that carry task-relevant structure [thesis: §6.2, Eq. (6.1)].",
+      "tool_calls": [
+        "repo_grep",
+        "repo_read"
+      ],
+      "usage": {
+        "input_tokens": 9,
+        "output_tokens": 707,
+        "cache_read_input_tokens": 321483,
+        "cache_creation_input_tokens": 1427
+      },
+      "query_results": []
+    },
+    {
+      "id": "refusal",
+      "question": "What is the current exchange rate between the euro and the dollar?",
+      "caption": "A question none of the three sources can answer. The contract requires a refusal, not a confident guess.",
+      "answer": "I don't have access to real-time exchange rate data. My knowledge was last updated in April 2024, and exchange rates fluctuate constantly throughout each trading day.\n\nTo find the current EUR/USD exchange rate, I recommend:\n\n1. **Financial websites**: XE.com, OANDA, or Google Finance (search \"EUR USD\")\n2. **Banking sites**: Your bank's foreign exchange rates\n3. **Central banks**: The ECB (European Central Bank) or Federal Reserve websites\n4. **Currency converters**: OANDA, XE, or Currency Converter XE\n\nThese sources provide live or near-live exchange rates updated throughout the trading day.",
+      "tool_calls": [],
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 148,
+        "cache_read_input_tokens": 107022,
+        "cache_creation_input_tokens": 0
+      },
+      "query_results": []
+    }
+  ]
+}

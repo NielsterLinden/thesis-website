@@ -1,5 +1,6 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get, Header, Inject } from '@nestjs/common';
 import { AppConfig, isPlaceholder } from './config';
+import { loadThesisAnchors, ThesisAnchors } from './thesis-anchors';
 import { APP_CONFIG } from './tokens';
 
 /**
@@ -13,7 +14,20 @@ import { APP_CONFIG } from './tokens';
  */
 @Controller()
 export class MetaController {
-  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
+  private readonly anchors: ThesisAnchors;
+
+  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
+    this.anchors = loadThesisAnchors(config);
+  }
+
+  /** Citation key -> hyperref named destination in /thesis.pdf, so the
+   *  frontend can turn [thesis: §4.2 / Eq. (6.1) / fig:…] chips into
+   *  #nameddest deep links. Ungated for the same reason /thesis.pdf is. */
+  @Get('thesis-anchors.json')
+  @Header('Cache-Control', 'public, max-age=300')
+  thesisAnchors(): ThesisAnchors {
+    return this.anchors;
+  }
 
   @Get('meta')
   meta(): {

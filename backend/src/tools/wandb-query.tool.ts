@@ -1,5 +1,5 @@
 import { CsvStore, Row } from './csv-store';
-import { Tool, ToolDefinition, ToolResult, toolError } from './types';
+import { Tool, ToolDefinition, ToolResult, toolError, WandbQueryGroup } from './types';
 
 const OPS = ['==', '!=', 'in', '>', '<', '>=', '<='] as const;
 export type Op = (typeof OPS)[number];
@@ -208,21 +208,22 @@ export class WandbQueryTool implements Tool {
       };
     }
 
-    const lines: string[] = [];
+    const groupResults: WandbQueryGroup[] = [];
+    let truncatedGroups = 0;
     if (groupbyColumns.length === 0) {
-      const result = this.aggregateGroup(filtered, agg, metricColumn);
-      lines.push(this.formatGroupLine(null, result, agg, metricColumn));
+      groupResults.push({ key: null, ...this.aggregateGroup(filtered, agg, metricColumn) });
     } else {
       const groups = this.groupRows(filtered, groupbyColumns);
       const keys = [...groups.keys()].sort();
       const shown = keys.slice(0, MAX_GROUPS);
+      truncatedGroups = keys.length - shown.length;
       for (const key of shown) {
-        const result = this.aggregateGroup(groups.get(key) as Row[], agg, metricColumn);
-        lines.push(this.formatGroupLine(key, result, agg, metricColumn));
+        groupResults.push({ key, ...this.aggregateGroup(groups.get(key) as Row[], agg, metricColumn) });
       }
-      if (keys.length > shown.length) {
-        lines.push(`… (${keys.length - shown.length} more groups omitted; add filters to narrow)`);
-      }
+    }
+    const lines = groupResults.map((g) => this.formatGroupLine(g.key, g, agg, metricColumn));
+    if (truncatedGroups > 0) {
+      lines.push(`… (${truncatedGroups} more groups omitted; add filters to narrow)`);
     }
 
     const header =
@@ -235,7 +236,20 @@ export class WandbQueryTool implements Tool {
       groupbyTokens.length ? `, groupby=${groupbyTokens.join('+')}` : ''
     }, metric=${agg === 'count' ? 'count' : metricColumn}, agg=${agg}]`;
 
-    return { content: `${header}\n${lines.join('\n')}\n${citation}` };
+    return {
+      content: `${header}\n${lines.join('\n')}\n${citation}`,
+      queryResult: {
+        title: header.replace(/:$/, ''),
+        metric: agg === 'count' ? '' : metricColumn,
+        agg,
+        groupby: groupbyTokens,
+        filters: filters.map((f) => ({ field: f.field, op: f.op, value: f.value })),
+        groups: groupResults,
+        matching_runs: filtered.length,
+        truncated_groups: truncatedGroups,
+        citation,
+      },
+    };
   }
 
   private aggregateGroup(

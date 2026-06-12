@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { SiteMeta } from '../types';
+import { SiteMeta, ThesisAnchors } from '../types';
 import { SUGGESTIONS } from './Chat';
 import { ChatIcon, GithubIcon, PdfIcon, WandbIcon } from './icons';
+import { Tour } from './Tour';
 import { WandbModal } from './WandbModal';
 
 /** Prefilled question for the modal's "create your own report" path — routes
@@ -23,10 +24,12 @@ function repoTreeUrl(meta: SiteMeta | null): string | null {
 
 export function Landing({
   meta,
+  anchors,
   onOpenChat,
   onOpenPdf,
 }: {
   meta: SiteMeta | null;
+  anchors: ThesisAnchors | null;
   onOpenChat: (prompt?: string) => void;
   onOpenPdf: () => void;
 }) {
@@ -108,18 +111,20 @@ export function Landing({
             <span className="cite cite-thesis">
               <span className="cite-kind">thesis</span> §4.2
             </span>{' '}
-            opens the thesis PDF ·{' '}
+            opens the thesis PDF at that exact section ·{' '}
             <span className="cite cite-code">
               <span className="cite-kind">code</span> src/model.py:42-58
             </span>{' '}
             links to those exact lines at the pinned commit ·{' '}
             <span className="cite cite-wandb">
-              <span className="cite-kind">wandb</span> H10==&quot;d256_L6&quot;, N=8, median
+              <span className="cite-kind">wandb</span> H10==&quot;d256_L6&quot;, metric=eval_v2/test_auroc, agg=median
             </span>{' '}
-            shows the precise filters and sample count behind a number.
+            reveals the full query result (filters, groups, N) behind a number.
           </p>
           <p>When no tool-grounded evidence exists, the assistant says so rather than inventing an answer.</p>
         </section>
+
+        <Tour meta={meta} anchors={anchors} onOpenChat={() => onOpenChat()} />
 
         {meta && treeUrl && (
           <footer className="landing-footer">
