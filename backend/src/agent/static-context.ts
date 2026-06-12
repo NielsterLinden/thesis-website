@@ -23,6 +23,39 @@ const THESIS_FILES_IN_ORDER = [
   'frontmatter/preface.tex',
 ];
 
+/**
+ * Strip LaTeX comments and collapse blank runs before the TeX enters the
+ * cached prefix. Comments are not citable content (citations anchor on
+ * \section{}/\label{}, which survive), and the prefix is re-read on every
+ * agent-loop iteration, so every byte removed is saved on each call. The
+ * transform is deterministic, keeping the prefix byte-stable across requests
+ * (which the cache hit depends on). Known minor edge: a literal % inside a
+ * verbatim environment would be cut — harmless in a model-only view.
+ */
+export function stripTexForContext(tex: string): string {
+  const out: string[] = [];
+  let blankRun = 0;
+  for (const raw of tex.split('\n')) {
+    let line = raw;
+    // Prefix of escaped chars (\% stays a literal percent) or non-% chars,
+    // up to the first unescaped %, which starts the comment.
+    const m = /^((?:\\.|[^%\\])*)%/.exec(line);
+    if (m) {
+      if (m[1].trim() === '') continue; // comment-only line: drop, no blank left behind
+      line = m[1];
+    }
+    line = line.replace(/\s+$/, ''); // also normalizes CRLF
+    if (line === '') {
+      blankRun++;
+      if (blankRun > 1) continue; // a single blank keeps the paragraph break
+    } else {
+      blankRun = 0;
+    }
+    out.push(line);
+  }
+  return out.join('\n').trim();
+}
+
 function listMainmatter(thesisReportDir: string): string[] {
   const dir = join(thesisReportDir, 'mainmatter');
   if (!existsSync(dir)) return [];
@@ -48,10 +81,11 @@ export function buildStaticContext(config: AppConfig): StaticContext {
   for (const rel of relFiles) {
     const abs = join(thesisReportDir, rel);
     if (!existsSync(abs)) continue;
-    const text = readFileSync(abs, 'utf8');
+    const text = stripTexForContext(readFileSync(abs, 'utf8'));
     includedFiles.push(rel);
     // The marker lets the model anchor its [thesis: …] citations to a file and
-    // the \section{}/\label{} markers within it.
+    // the \section{}/\label{} markers within it. It is added AFTER comment
+    // stripping, so it is the one %-line that survives.
     parts.push(`% ===== THESIS FILE: thesis_report/${rel} =====\n${text}`);
   }
   const thesisTeX = parts.join('\n\n');

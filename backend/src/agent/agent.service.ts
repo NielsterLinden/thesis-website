@@ -32,6 +32,43 @@ export interface ChatResult {
   report_proposal: ReportProposal | null;
 }
 
+/** Keep only the most recent `max` messages of the client-sent history,
+ *  then drop any leading assistant messages so the model still sees a
+ *  user-first conversation. Bounds per-turn input growth in long sessions.
+ *  Exported for tests. */
+export function trimHistory(history: ChatMessage[], max: number): ChatMessage[] {
+  if (max <= 0 || history.length <= max) return history;
+  let out = history.slice(-max);
+  while (out.length > 0 && out[0].role !== 'user') out = out.slice(1);
+  return out;
+}
+
+function extractText(response: Anthropic.Message | null): string {
+  if (!response) return '';
+  return response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n')
+    .trim();
+}
+
+/** Append loop-steering guidance to the trailing user message (tool_result
+ *  blocks must come first in a user message, so the note goes at the end of
+ *  its content array), or as a new user message after an assistant turn. */
+function appendUserText(messages: Anthropic.MessageParam[], text: string): void {
+  const last = messages[messages.length - 1];
+  if (!last || last.role !== 'user') {
+    messages.push({ role: 'user', content: text });
+    return;
+  }
+  const content: Anthropic.ContentBlockParam[] =
+    typeof last.content === 'string'
+      ? [{ type: 'text', text: last.content }]
+      : last.content.slice();
+  content.push({ type: 'text', text });
+  messages[messages.length - 1] = { ...last, content };
+}
+
 /** Add a cache_control breakpoint to the last message so the conversation
  *  prefix (which grows with each tool round-trip) is cached too. Returns a
  *  shallow copy; the stored messages stay marker-free so we never exceed the
@@ -66,6 +103,9 @@ export class AgentService {
     // serving) without a key; /chat then fails cleanly at the API, not at startup.
     this.anthropic = new Anthropic({
       apiKey: config.anthropicApiKey || 'ANTHROPIC_API_KEY_NOT_CONFIGURED',
+      // One extra transient-error retry over the SDK default (2): a 529
+      // mid-loop otherwise throws away the whole turn's gathered evidence.
+      maxRetries: 3,
     });
     this.registry = ToolRegistry.build(config);
     this.toolDefinitions = this.registry.definitions() as Anthropic.Tool[];
@@ -89,7 +129,10 @@ export class AgentService {
   }
 
   async chat(history: ChatMessage[]): Promise<ChatResult> {
-    const messages: Anthropic.MessageParam[] = history.map((m) => ({
+    const messages: Anthropic.MessageParam[] = trimHistory(
+      history,
+      this.config.maxHistoryMessages,
+    ).map((m) => ({
       role: m.role,
       content: m.content,
     }));
@@ -105,16 +148,23 @@ export class AgentService {
     let capped = false;
     let lastResponse: Anthropic.Message | null = null;
     let reportProposal: ReportProposal | null = null;
+    // Text salvaged from a response that hit the output-token ceiling; the
+    // continuation call's text is appended to it.
+    let answerPrefix = '';
+    let continuedAfterTruncation = false;
+    let forceFinal = false;
 
     // Hard iteration ceiling: at most one tool round-trip per allowed tool call,
-    // plus one final no-tools call to force an answer.
-    const maxIterations = this.config.maxToolCallsPerTurn + 2;
+    // plus one final no-tools call to force an answer, plus at most one
+    // continuation when that answer hits the output-token ceiling.
+    const maxIterations = this.config.maxToolCallsPerTurn + 3;
 
     for (let iter = 0; iter < maxIterations; iter++) {
       const overBudget =
         toolCalls >= this.config.maxToolCallsPerTurn ||
         usage.input_tokens >= this.config.maxConversationInputTokens;
       if (overBudget) capped = true;
+      const noTools = overBudget || forceFinal;
 
       const request: Anthropic.MessageCreateParamsNonStreaming = {
         model: this.config.anthropicModel,
@@ -123,7 +173,7 @@ export class AgentService {
         tools: this.toolDefinitions,
         // Toggling tool_choice does NOT invalidate the tools/system cache
         // (only the messages tier), so the big static prefix stays cached.
-        tool_choice: overBudget ? { type: 'none' } : { type: 'auto' },
+        tool_choice: noTools ? { type: 'none' } : { type: 'auto' },
         messages: withLastMessageCached(messages),
       };
       // effort=none omits both params: models without adaptive-thinking
@@ -143,8 +193,34 @@ export class AgentService {
       usage.cache_read_input_tokens += response.usage.cache_read_input_tokens ?? 0;
       usage.cache_creation_input_tokens += response.usage.cache_creation_input_tokens ?? 0;
 
-      if (overBudget || response.stop_reason !== 'tool_use') {
-        return this.finalize(response, toolCallNames, usage, capped, reportProposal);
+      if (noTools || response.stop_reason !== 'tool_use') {
+        const text = extractText(response);
+        // The answer hit the output-token ceiling: salvage the partial text
+        // and make ONE continuation call instead of returning a cut-off
+        // sentence (or, worse, nothing, when the budget went to a tool call
+        // or thinking that never completed).
+        if (response.stop_reason === 'max_tokens' && !continuedAfterTruncation) {
+          continuedAfterTruncation = true;
+          forceFinal = true;
+          if (text.length > 0) {
+            answerPrefix = text;
+            messages.push({ role: 'assistant', content: text });
+            appendUserText(
+              messages,
+              'Your answer was cut off by the output-token limit. Continue from the exact ' +
+                'point where it stopped, without repeating anything already written, and ' +
+                'finish promptly.',
+            );
+          } else {
+            appendUserText(
+              messages,
+              'You ran out of output tokens before any answer text appeared. State your ' +
+                'final answer now, concisely.',
+            );
+          }
+          continue;
+        }
+        return this.finalize(answerPrefix + text, response, toolCallNames, usage, capped, reportProposal);
       }
 
       // Preserve the full assistant content (incl. thinking + tool_use blocks,
@@ -182,27 +258,54 @@ export class AgentService {
         });
       }
       messages.push({ role: 'user', content: toolResults });
+
+      // Budget steering: tell the model where it stands so the cap never
+      // lands as a surprise mid-investigation. When the budget is exhausted
+      // the next call is forced tool-less (overBudget above), so this note is
+      // what turns that call into a grounded partial answer, not a refusal.
+      const remainingCalls = this.config.maxToolCallsPerTurn - toolCalls;
+      const exhausted =
+        remainingCalls <= 0 ||
+        usage.input_tokens >= this.config.maxConversationInputTokens;
+      if (exhausted) {
+        appendUserText(
+          messages,
+          "The tool budget for this request is now exhausted; no further tool calls will " +
+            "be executed. Answer the user's question from the evidence already gathered: " +
+            'state what the citations support, and name plainly anything you could not ' +
+            'verify. Do not reply with only a refusal.',
+        );
+      } else if (remainingCalls <= 2) {
+        appendUserText(
+          messages,
+          `Budget note: only ${remainingCalls} tool call(s) remain for this request. ` +
+            'Batch any remaining independent lookups into one turn, and be ready to ' +
+            'answer from what you have.',
+        );
+      }
     }
 
     // Exhausted the iteration ceiling without a terminal stop — finalize what we have.
     capped = true;
-    return this.finalize(lastResponse, toolCallNames, usage, capped, reportProposal);
+    return this.finalize(
+      answerPrefix.length > 0 ? answerPrefix : extractText(lastResponse),
+      lastResponse,
+      toolCallNames,
+      usage,
+      capped,
+      reportProposal,
+    );
   }
 
   private finalize(
+    answerText: string,
     response: Anthropic.Message | null,
     toolCalls: string[],
     usage: ChatUsage,
     capped: boolean,
     reportProposal: ReportProposal | null,
   ): ChatResult {
-    let answer = response
-      ? response.content
-          .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-          .map((b) => b.text)
-          .join('\n')
-          .trim()
-      : '';
+    let answer = answerText.trim();
 
     if (answer.length === 0) {
       answer = capped

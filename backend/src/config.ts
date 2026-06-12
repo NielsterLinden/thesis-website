@@ -71,6 +71,12 @@ export interface AppConfig {
   // see Initial_plan.md §5.2 — no transcripts are persisted).
   maxConversationInputTokens: number;
   maxToolCallsPerTurn: number;
+  /**
+   * The browser resends the full conversation every turn; only the most recent
+   * N messages are forwarded to the model. Bounds per-turn input growth in
+   * long sessions at the cost of the model forgetting older turns. 0 = no cap.
+   */
+  maxHistoryMessages: number;
 
   // Generation
   maxOutputTokens: number;
@@ -138,6 +144,7 @@ export function loadConfig(): AppConfig {
 
     maxConversationInputTokens: int('MAX_CONVERSATION_INPUT_TOKENS', 200_000),
     maxToolCallsPerTurn: int('MAX_TOOL_CALLS_PER_TURN', 20),
+    maxHistoryMessages: int('MAX_HISTORY_MESSAGES', 8),
 
     maxOutputTokens: int('MAX_OUTPUT_TOKENS', 8_192),
 

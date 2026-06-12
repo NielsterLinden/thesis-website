@@ -4,12 +4,15 @@ import { PathEscapeError, resolveWithinRoot } from './paths';
 import { Tool, ToolDefinition, ToolResult, toolError } from './types';
 
 // Caps so a broad pattern or a huge file cannot flood the model context
-// (Initial_plan.md §5.3, §14).
-const GREP_MAX_MATCHES = 200;
-const GREP_MAX_BYTES = 64 * 1024;
+// (Initial_plan.md §5.3, §14). Every byte returned is uncached conversation
+// input that rides along all later loop iterations, so the defaults are kept
+// tight; the truncation notes tell the model how to ask for more.
+const GREP_DEFAULT_MATCHES = 50;
+const GREP_MAX_MATCHES = 200; // reachable only via an explicit max_results
+const GREP_MAX_BYTES = 16 * 1024;
 const GREP_MAX_FILE_BYTES = 1024 * 1024; // skip files larger than 1 MB
-const READ_MAX_LINES = 600;
-const READ_MAX_BYTES = 64 * 1024;
+const READ_MAX_LINES = 300;
+const READ_MAX_BYTES = 24 * 1024;
 
 // Directories and binary/generated extensions never worth grepping for a
 // "how/why was X implemented" question. The frozen result CSVs and compiled
@@ -179,7 +182,8 @@ export class RepoGrepTool implements Tool {
       'expression and return matching lines with their file path and line ' +
       'number. This is the entry point for code "how/why" questions: grep to ' +
       'locate, then repo_read to read the surrounding implementation. Results ' +
-      `are capped (${GREP_MAX_MATCHES} matches / ${GREP_MAX_BYTES / 1024} KB) and ` +
+      `are capped (default ${GREP_DEFAULT_MATCHES} matches, raiseable to ` +
+      `${GREP_MAX_MATCHES} via max_results, ${GREP_MAX_BYTES / 1024} KB) and ` +
       'binary/large data files are skipped. Each line is a [code: path:line] anchor.',
     input_schema: {
       type: 'object',
@@ -204,7 +208,7 @@ export class RepoGrepTool implements Tool {
         },
         max_results: {
           type: 'integer',
-          description: `Cap on returned matches (default and hard max ${GREP_MAX_MATCHES}).`,
+          description: `Cap on returned matches (default ${GREP_DEFAULT_MATCHES}, hard max ${GREP_MAX_MATCHES}).`,
         },
       },
       required: ['pattern'],
@@ -243,7 +247,7 @@ export class RepoGrepTool implements Tool {
       GREP_MAX_MATCHES,
       typeof input.max_results === 'number' && input.max_results > 0
         ? Math.floor(input.max_results)
-        : GREP_MAX_MATCHES,
+        : GREP_DEFAULT_MATCHES,
     );
 
     const matches: string[] = [];
@@ -287,7 +291,7 @@ export class RepoGrepTool implements Tool {
     }
 
     const header =
-      `${matches.length} match(es)${hitCap ? ' (capped — narrow the pattern for more)' : ''} ` +
+      `${matches.length} match(es)${hitCap ? ' (capped; narrow the pattern or raise max_results)' : ''} ` +
       `for /${pattern}/:`;
     return { content: `${header}\n${matches.join('\n')}` };
   }
