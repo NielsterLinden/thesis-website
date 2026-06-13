@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SiteMeta, ThesisAnchors } from '../types';
 import { SUGGESTIONS } from './Chat';
-import { ChatIcon, GithubIcon, PdfIcon, WandbIcon } from './icons';
+import { ChatIcon, FigureIcon, GithubIcon, PdfIcon, WandbIcon } from './icons';
 import { Tour } from './Tour';
 import { WandbModal } from './WandbModal';
 
@@ -27,11 +27,13 @@ export function Landing({
   anchors,
   onOpenChat,
   onOpenPdf,
+  onOpenFigures,
 }: {
   meta: SiteMeta | null;
   anchors: ThesisAnchors | null;
   onOpenChat: (prompt?: string) => void;
   onOpenPdf: () => void;
+  onOpenFigures: () => void;
 }) {
   const [wandbOpen, setWandbOpen] = useState(false);
   const treeUrl = repoTreeUrl(meta);
@@ -48,6 +50,10 @@ export function Landing({
           <ul className="landing-caps">
             <li>
               <strong>Read the thesis</strong> right here in the browser.
+            </li>
+            <li>
+              <strong>Browse the figures</strong>: every plot from the thesis, with what it shows, the models behind
+              it, and a link into the run database.
             </li>
             <li>
               <strong>Visit the codebase</strong>: the exact pinned snapshot the results were produced from.
@@ -77,6 +83,9 @@ export function Landing({
           <div className="landing-actions-row">
             <button className="action action-secondary" onClick={onOpenPdf}>
               <PdfIcon /> Thesis PDF
+            </button>
+            <button className="action action-secondary" onClick={onOpenFigures}>
+              <FigureIcon /> Figures
             </button>
             {treeUrl && (
               <a className="action action-secondary" href={treeUrl} target="_blank" rel="noreferrer">

@@ -1,8 +1,10 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, postChatStream, saveReport } from '../api';
 import { DisplayMessage, PendingPrompt, SiteMeta, ThesisAnchors } from '../types';
+import { FigureEntry } from '../figures';
 import { Message } from './Message';
 import { ThesisPanel, ThesisTarget } from './ThesisPanel';
+import { FigurePanel, FigureTarget } from './FigurePanel';
 
 /** Seed questions mirroring the §9 acceptance checks, so a first-time
  *  examiner sees what each tool surface can do. Exported for the landing
@@ -37,6 +39,7 @@ function toMarkdown(messages: DisplayMessage[]): string {
 export function Chat({
   meta,
   anchors,
+  figures,
   password,
   onAuthExpired,
   pendingPrompt,
@@ -44,6 +47,7 @@ export function Chat({
 }: {
   meta: SiteMeta | null;
   anchors: ThesisAnchors | null;
+  figures: FigureEntry[] | null;
   password: string;
   onAuthExpired: () => void;
   pendingPrompt: PendingPrompt | null;
@@ -55,12 +59,22 @@ export function Chat({
   const [progress, setProgress] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [thesisTarget, setThesisTarget] = useState<ThesisTarget | null>(null);
+  const [figureTarget, setFigureTarget] = useState<FigureTarget | null>(null);
   const thesisSeq = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  /** A [thesis: …] chip click: dock the inline viewer at the cited location. */
-  function openThesis(dest: string, label: string) {
-    setThesisTarget({ dest, label, seq: ++thesisSeq.current });
+  /** A [thesis: …] chip click: dock the inline viewer at the cited location. A
+   *  figure citation matched against the gallery opens the figure itself; any
+   *  other thesis citation renders the cited PDF page. The two share the one
+   *  panel slot, so opening one closes the other. */
+  function openThesis(dest: string | null, label: string, figure?: FigureEntry) {
+    if (figure) {
+      setThesisTarget(null);
+      setFigureTarget({ figure, seq: ++thesisSeq.current });
+    } else if (dest) {
+      setFigureTarget(null);
+      setThesisTarget({ dest, label, seq: ++thesisSeq.current });
+    }
   }
 
   useEffect(() => {
@@ -173,6 +187,7 @@ export function Chat({
             msg={m}
             meta={meta}
             anchors={anchors}
+            figures={figures}
             onSaveReport={(spec) => saveReport(spec, password)}
             onOpenThesis={openThesis}
           />
@@ -235,6 +250,7 @@ export function Chat({
       </form>
       </div>
       {thesisTarget && <ThesisPanel target={thesisTarget} onClose={() => setThesisTarget(null)} />}
+      {figureTarget && <FigurePanel target={figureTarget} onClose={() => setFigureTarget(null)} />}
     </div>
   );
 }

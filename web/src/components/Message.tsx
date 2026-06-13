@@ -13,6 +13,7 @@ import {
   thesisCitationUrl,
 } from '../citations';
 import { DisplayMessage, SiteMeta, ThesisAnchors } from '../types';
+import { FigureEntry, figureForCitation } from '../figures';
 import { QueryResultPanel } from './QueryResults';
 import { ReportConfirm } from './ReportConfirm';
 
@@ -41,6 +42,7 @@ function CitationChip({
   href,
   meta,
   anchors,
+  figures,
   onShowQuery,
   onOpenThesis,
   queryCitations,
@@ -48,8 +50,9 @@ function CitationChip({
   href: string;
   meta: SiteMeta | null;
   anchors: ThesisAnchors | null;
+  figures: FigureEntry[] | null;
   onShowQuery: (index: number) => void;
-  onOpenThesis?: (dest: string, label: string) => void;
+  onOpenThesis?: (dest: string | null, label: string, figure?: FigureEntry) => void;
   queryCitations: string[];
 }) {
   const cite = decodeCitation(href);
@@ -70,15 +73,17 @@ function CitationChip({
   } else if (kind === 'thesis') {
     // Inside the chat the chip opens the inline panel at the cited location
     // (reliable in every browser); elsewhere (the landing tour) it stays a
-    // new-tab deep link.
+    // new-tab deep link. A figure citation that matches a gallery entry opens
+    // the figure itself (the actual plot + caption), not just its PDF page.
+    const figure = figureForCitation(body, figures);
     const dest = thesisCitationDest(body, anchors);
-    if (dest && onOpenThesis) {
+    if ((figure || dest) && onOpenThesis) {
       return (
         <button
           type="button"
           className="cite cite-thesis cite-action"
-          title={`${body}: show this location in the thesis panel`}
-          onClick={() => onOpenThesis(dest, body)}
+          title={figure ? `${body}: show this figure` : `${body}: show this location in the thesis panel`}
+          onClick={() => onOpenThesis(dest, body, figure ?? undefined)}
         >
           {label}
         </button>
@@ -119,14 +124,16 @@ export function Message({
   msg,
   meta,
   anchors,
+  figures,
   onSaveReport,
   onOpenThesis,
 }: {
   msg: DisplayMessage;
   meta: SiteMeta | null;
   anchors: ThesisAnchors | null;
+  figures?: FigureEntry[] | null;
   onSaveReport?: (spec: unknown) => Promise<{ url: string }>;
-  onOpenThesis?: (dest: string, label: string) => void;
+  onOpenThesis?: (dest: string | null, label: string, figure?: FigureEntry) => void;
 }) {
   const panelRefs = useRef<(HTMLDetailsElement | null)[]>([]);
 
@@ -168,6 +175,7 @@ export function Message({
                     href={href}
                     meta={meta}
                     anchors={anchors}
+                    figures={figures ?? null}
                     onShowQuery={showQuery}
                     onOpenThesis={onOpenThesis}
                     queryCitations={queryCitations}
