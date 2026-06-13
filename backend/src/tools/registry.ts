@@ -1,4 +1,4 @@
-import { AppConfig } from '../config';
+import { AppConfig, isPlaceholder } from '../config';
 import { AuthorReportTool } from './author-report.tool';
 import { AxesLookupTool } from './axes-lookup.tool';
 import { loadAxesReference } from './axes-reference';
@@ -23,10 +23,16 @@ export class ToolRegistry {
   static build(config: AppConfig): ToolRegistry {
     const csv = loadCsvStore(config.dataCsvPath);
     const axes = loadAxesReference(config.axesReferencePath);
+    // Per-run W&B links need only entity + source project (same gate as the
+    // /meta browse links); omitted otherwise, so runs list as names without links.
+    const wandbLink =
+      !isPlaceholder(config.wandbEntity) && !isPlaceholder(config.wandbSourceProject)
+        ? { entity: config.wandbEntity, sourceProject: config.wandbSourceProject }
+        : undefined;
     const tools: Tool[] = [
       new RepoGrepTool(config.thesisSrcDir),
       new RepoReadTool(config.thesisSrcDir),
-      new WandbQueryTool(csv),
+      new WandbQueryTool(csv, wandbLink),
       new AxesLookupTool(axes, csv),
     ];
     if (config.reportsEnabled) {

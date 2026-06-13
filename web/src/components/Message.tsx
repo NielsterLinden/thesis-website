@@ -22,9 +22,14 @@ import { ReportConfirm } from './ReportConfirm';
 const UNCITED_NOTICE_MIN_CHARS = 280;
 
 /** Match a [wandb: …] chip body against the turn's attached query results so
- *  clicking the chip can reveal the exact table behind the number. The model
- *  is instructed to copy the tool's citation verbatim; when it didn't but the
- *  turn ran exactly one query, that one is the only possible referent. */
+ *  clicking the chip can reveal the exact table behind the number. The model is
+ *  instructed to copy the tool's citation verbatim; three fallbacks, in order of
+ *  confidence, recover the link when it didn't:
+ *    1. exact (whitespace-normalized) string match;
+ *    2. token-set match — the chip's comma-separated parts are all contained in
+ *       exactly one candidate (handles the model reordering/dropping tokens);
+ *    3. when the turn ran exactly one query, that is the only possible referent.
+ *  A non-unique token-set match is rejected rather than guessed. */
 function matchQueryResult(body: string, citations: string[]): number | null {
   const norm = (s: string) =>
     s
@@ -35,6 +40,23 @@ function matchQueryResult(body: string, citations: string[]): number | null {
   const target = norm(body);
   const exact = citations.findIndex((c) => norm(c) === target);
   if (exact >= 0) return exact;
+
+  // Token-set containment: split on commas, drop empties, compare order-free.
+  const tokens = (s: string) =>
+    new Set(
+      norm(s)
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
+    );
+  const want = tokens(target);
+  if (want.size > 0) {
+    const matches = citations
+      .map((c, i) => ({ i, set: tokens(c) }))
+      .filter(({ set }) => [...want].every((t) => set.has(t)));
+    if (matches.length === 1) return matches[0].i;
+  }
+
   return citations.length === 1 ? 0 : null;
 }
 

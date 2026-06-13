@@ -37,6 +37,15 @@ export interface ToolResult {
   queryResult?: WandbQueryResultData;
 }
 
+/** A single run inside a query-result group: the verification drill-down behind
+ *  an aggregate. `url` is built backend-side from the run's CSV cells (so the
+ *  model can never fabricate it) and is null when W&B is not configured. */
+export interface WandbRunRef {
+  name: string;
+  seed: string | null;
+  url: string | null;
+}
+
 /** One aggregated group of a wandb_query result (key is null when the query
  *  had no groupby and aggregated over all matching runs). */
 export interface WandbQueryGroup {
@@ -44,6 +53,11 @@ export interface WandbQueryGroup {
   value: number;
   n: number;
   skipped: number;
+  /** Constituent runs, attached only for readable (few-group) results so the
+   *  panel can list/link them; omitted for large fan-outs to bound the payload. */
+  runs?: WandbRunRef[];
+  /** Runs beyond the per-group cap (the listed `runs` exclude these). */
+  runs_omitted?: number;
 }
 
 export interface WandbQueryResultData {

@@ -15,6 +15,7 @@ describe('GET /meta', () => {
     }).meta();
     expect(meta.wandb_runs_url).toBeNull();
     expect(meta.wandb_reports_url).toBeNull();
+    expect(meta.wandb_visitor_reports_url).toBeNull();
     // The citation-link contract is independent of W&B config.
     expect(meta.thesis_repo_url).toMatch(/^https:\/\//);
     expect(meta.thesis_src_commit).toMatch(/^[0-9a-f]{7,40}$/);
@@ -27,6 +28,10 @@ describe('GET /meta', () => {
     }).meta();
     expect(meta.wandb_runs_url).toBe('https://wandb.ai/nterlind-nikhef/thesis-ml/table');
     expect(meta.wandb_reports_url).toBe('https://wandb.ai/nterlind-nikhef/thesis-ml/reportlist');
+    // The visitor-reports project (default target) is browsable on the same gate.
+    expect(meta.wandb_visitor_reports_url).toBe(
+      'https://wandb.ai/nterlind-nikhef/thesis-visitor-reports/reportlist',
+    );
   });
 });
 

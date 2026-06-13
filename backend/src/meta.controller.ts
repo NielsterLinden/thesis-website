@@ -35,19 +35,25 @@ export class MetaController {
     thesis_src_commit: string;
     wandb_runs_url: string | null;
     wandb_reports_url: string | null;
+    wandb_visitor_reports_url: string | null;
   } {
     // Browse links need only the entity + source project; deliberately not
     // chained to reportsEnabled, which means "authoring on" (needs a key too).
     const wandbConfigured =
       !isPlaceholder(this.config.wandbEntity) && !isPlaceholder(this.config.wandbSourceProject);
-    const wandbBase = wandbConfigured
-      ? `https://wandb.ai/${encodeURIComponent(this.config.wandbEntity)}/${encodeURIComponent(this.config.wandbSourceProject)}`
+    const entityBase = wandbConfigured
+      ? `https://wandb.ai/${encodeURIComponent(this.config.wandbEntity)}`
       : null;
+    const wandbBase = entityBase && `${entityBase}/${encodeURIComponent(this.config.wandbSourceProject)}`;
     return {
       thesis_repo_url: this.config.submoduleRepoUrl,
       thesis_src_commit: this.config.submoduleSha,
       wandb_runs_url: wandbBase && `${wandbBase}/table`,
       wandb_reports_url: wandbBase && `${wandbBase}/reportlist`,
+      // Where confirmed visitor drafts land — browsable so a saved report is
+      // findable beyond the one-time URL on its confirm card.
+      wandb_visitor_reports_url:
+        entityBase && `${entityBase}/${encodeURIComponent(this.config.wandbTargetProject)}/reportlist`,
     };
   }
 }

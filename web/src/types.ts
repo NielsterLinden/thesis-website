@@ -18,6 +18,15 @@ export interface ReportProposal {
   summary: string;
 }
 
+/** A single run behind a query-result group. `url` is built backend-side from
+ *  the run's CSV cells (so it cannot be fabricated) and is null when W&B is not
+ *  configured, in which case the run still lists by name. */
+export interface WandbRunRef {
+  name: string;
+  seed: string | null;
+  url: string | null;
+}
+
 /** One aggregated group of a wandb_query result. `key` is null when the query
  *  had no groupby; `value` is null when every row was non-numeric (the backend
  *  NaN serializes to null). */
@@ -26,6 +35,10 @@ export interface WandbQueryGroup {
   value: number | null;
   n: number;
   skipped: number;
+  /** Constituent runs, present only for readable (few-group) results. */
+  runs?: WandbRunRef[];
+  /** Runs beyond the per-group cap (the listed `runs` exclude these). */
+  runs_omitted?: number;
 }
 
 /** A wandb_query aggregate captured server-side and shipped outside the
@@ -67,6 +80,8 @@ export interface SiteMeta {
   thesis_src_commit: string;
   wandb_runs_url?: string | null;
   wandb_reports_url?: string | null;
+  /** The visitor-reports project's report list (where confirmed drafts land). */
+  wandb_visitor_reports_url?: string | null;
 }
 
 /** A question handed from the landing page to Chat. `seq` makes every click a

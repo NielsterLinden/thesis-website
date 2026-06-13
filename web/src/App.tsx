@@ -91,7 +91,6 @@ export function App() {
         <div style={{ display: view === 'home' ? 'contents' : 'none' }}>
           <Landing
             meta={meta}
-            anchors={anchors}
             onOpenChat={openChat}
             onOpenPdf={() => setView('pdf')}
             onOpenFigures={() => setView('figures')}

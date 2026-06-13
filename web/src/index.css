@@ -452,20 +452,7 @@ a.cite:hover {
   line-height: 1.6;
 }
 
-.landing-caps {
-  margin: 14px 0 0;
-  padding-left: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  line-height: 1.55;
-}
-
-.landing-caps li::marker {
-  color: var(--accent);
-}
-
-.landing-actions {
+.landing-cards {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -474,77 +461,101 @@ a.cite:hover {
   margin: 0 auto;
 }
 
-.landing-actions-row {
-  display: flex;
+.landing-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-/* The three destinations share one size: equal flex basis, identical style. */
-.landing-actions-row .action {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 15px;
-  text-decoration: none;
-}
-
-.action-chat {
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 16px;
-}
-
 @media (max-width: 560px) {
-  .landing-actions-row {
-    flex-direction: column;
+  .landing-cards-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-.action-primary {
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: #fff;
-}
-
-.action-secondary {
+/* A destination card: icon beside a title + one-line description. */
+.dest {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--border);
   color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.action-secondary:hover {
+.dest:hover {
   border-color: var(--accent);
+}
+
+.dest svg {
+  flex: 0 0 auto;
   color: var(--accent);
 }
 
-.landing-section h2 {
-  margin: 0 0 10px;
+/* Brand logos (W&B, Excel) ride at the same footprint as the inline svg
+   icons, but keep their own colours. */
+.dest-logo {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.dest-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dest-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.dest-desc {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* The chat card is the primary call to action: accent fill, larger. */
+.dest-chat {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  padding: 18px 20px;
+}
+
+.dest-chat:hover {
+  filter: brightness(0.96);
+  border-color: var(--accent);
+}
+
+.dest-chat svg {
+  color: #fff;
+}
+
+.dest-chat .dest-title {
   font-size: 17px;
 }
 
-.landing-section p {
-  margin: 0 0 10px;
-  line-height: 1.6;
+.dest-chat .dest-desc {
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.landing-section .suggestions {
-  justify-content: flex-start;
-  margin-top: 4px;
-}
-
-.trust-chips {
+.landing-trust {
+  margin: 0;
   color: var(--muted);
   font-size: 14px;
-  line-height: 2;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .landing-footer {
@@ -588,6 +599,18 @@ a.cite:hover {
 .modal h2 {
   margin: 0 0 4px;
   font-size: 18px;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 .modal-option {
@@ -752,6 +775,61 @@ button.cite-action:hover {
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
 }
 
+/* ---------- per-group run drill-down ---------- */
+
+.qr-expand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qr-caret {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.qr-runcount {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.qr-runs-row td {
+  background: var(--bg);
+}
+
+.qr-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12.5px;
+}
+
+.qr-run-seed {
+  display: inline-block;
+  min-width: 56px;
+  margin-right: 8px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.qr-runs-more {
+  color: var(--muted);
+  font-style: italic;
+}
+
 @keyframes qr-flash {
   0% {
     border-color: var(--cite-wandb);
@@ -787,59 +865,6 @@ button.cite-action:hover {
 .progress-log li.progress-current {
   list-style: '… ';
   animation: pulse 1.4s ease-in-out infinite;
-}
-
-/* ---------- guided tour (landing) ---------- */
-
-.tour {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.tour h2,
-.tour > p {
-  margin: 0;
-}
-
-.tour-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 16px;
-}
-
-.tour-card[open] {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.tour-card summary {
-  cursor: pointer;
-  user-select: none;
-}
-
-.tour-q {
-  font-weight: 600;
-}
-
-.tour-caption {
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* The canned answer reuses .msg-assistant; its bubble border doubles the
-   card's, so flatten it inside the tour. */
-.tour-card .msg-assistant .msg-body {
-  border: none;
-  padding: 0 2px;
-  background: transparent;
-}
-
-.tour-foot {
-  display: flex;
 }
 
 /* ---- Inline thesis panel (PDF.js, opened by [thesis: ...] chips in chat) ---- */

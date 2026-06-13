@@ -1,5 +1,5 @@
-import { CsvStore, Row } from './csv-store';
-import { Tool, ToolDefinition, ToolResult, toolError, WandbQueryGroup } from './types';
+import { CsvStore, Row, RUN_ID_COLUMN, RUN_NAME_COLUMN, RUN_PROJECT_COLUMN, SEED_COLUMN } from './csv-store';
+import { Tool, ToolDefinition, ToolResult, toolError, WandbQueryGroup, WandbRunRef } from './types';
 
 const OPS = ['==', '!=', 'in', '>', '<', '>=', '<='] as const;
 export type Op = (typeof OPS)[number];
@@ -8,6 +8,20 @@ const AGGS = ['median', 'mean', 'min', 'max', 'count'] as const;
 type Agg = (typeof AGGS)[number];
 
 const MAX_GROUPS = 200;
+
+/** Attach per-group run drill-down only for results small enough to read; a
+ *  200-group fan-out would balloon the response body for no UX gain. */
+const RUN_DETAIL_MAX_GROUPS = 30;
+/** Cap the runs listed per group (the rest are summarised as `runs_omitted`). */
+const RUN_DETAIL_MAX_PER_GROUP = 25;
+
+/** Live-W&B coordinates used to build verifiable per-run links. Supplied only
+ *  when the entity/source project are configured (same gate as the browse
+ *  links); absent in tests and the no-W&B deploy, where runs list as names. */
+export interface WandbLinkContext {
+  entity: string;
+  sourceProject: string;
+}
 
 interface Filter {
   field: string; // caller token (axis ID or column), echoed in the citation
@@ -73,7 +87,10 @@ export function compare(cellRaw: string | undefined, op: Op, value: unknown): bo
 }
 
 export class WandbQueryTool implements Tool {
-  constructor(private readonly store: CsvStore) {}
+  constructor(
+    private readonly store: CsvStore,
+    private readonly linkCtx?: WandbLinkContext,
+  ) {}
 
   readonly definition: ToolDefinition = {
     name: 'wandb_query',
@@ -209,16 +226,31 @@ export class WandbQueryTool implements Tool {
     }
 
     const groupResults: WandbQueryGroup[] = [];
+    const groupRowSets: Row[][] = []; // rows behind each group, parallel to groupResults
     let truncatedGroups = 0;
     if (groupbyColumns.length === 0) {
       groupResults.push({ key: null, ...this.aggregateGroup(filtered, agg, metricColumn) });
+      groupRowSets.push(filtered);
     } else {
       const groups = this.groupRows(filtered, groupbyColumns);
       const keys = [...groups.keys()].sort();
       const shown = keys.slice(0, MAX_GROUPS);
       truncatedGroups = keys.length - shown.length;
       for (const key of shown) {
-        groupResults.push({ key, ...this.aggregateGroup(groups.get(key) as Row[], agg, metricColumn) });
+        const rows = groups.get(key) as Row[];
+        groupResults.push({ key, ...this.aggregateGroup(rows, agg, metricColumn) });
+        groupRowSets.push(rows);
+      }
+    }
+
+    // Drill-down: attach the runs behind each aggregate so the panel can list
+    // and link them — but only when the result is small enough to read, so a
+    // large fan-out cannot balloon the response body.
+    if (groupResults.length <= RUN_DETAIL_MAX_GROUPS) {
+      for (let i = 0; i < groupResults.length; i++) {
+        const { runs, omitted } = this.runRefs(groupRowSets[i]);
+        groupResults[i].runs = runs;
+        if (omitted > 0) groupResults[i].runs_omitted = omitted;
       }
     }
     const lines = groupResults.map((g) => this.formatGroupLine(g.key, g, agg, metricColumn));
@@ -250,6 +282,39 @@ export class WandbQueryTool implements Tool {
         citation,
       },
     };
+  }
+
+  /** Verified run drill-down for one group: every matching run as a ref, capped
+   *  and sorted by seed then name. A run is real even if its metric cell is the
+   *  sentinel, so the count is the group's row count, not its numeric N. */
+  private runRefs(rows: Row[]): { runs: WandbRunRef[]; omitted: number } {
+    const refs = rows.map((row) => this.runRef(row));
+    refs.sort((a, b) => {
+      const sa = Number(a.seed);
+      const sb = Number(b.seed);
+      if (Number.isFinite(sa) && Number.isFinite(sb) && sa !== sb) return sa - sb;
+      return (a.seed ?? '').localeCompare(b.seed ?? '') || a.name.localeCompare(b.name);
+    });
+    return {
+      runs: refs.slice(0, RUN_DETAIL_MAX_PER_GROUP),
+      omitted: Math.max(0, refs.length - RUN_DETAIL_MAX_PER_GROUP),
+    };
+  }
+
+  /** One run's identity + a live W&B URL built from its own CSV cells (entity
+   *  from config, project/id from the row). url is null without a link context. */
+  private runRef(row: Row): WandbRunRef {
+    const id = (row[RUN_ID_COLUMN] ?? '').trim();
+    const name = (row[RUN_NAME_COLUMN] ?? '').trim() || id || '(unnamed run)';
+    const seed = (row[SEED_COLUMN] ?? '').trim() || null;
+    let url: string | null = null;
+    if (this.linkCtx && id) {
+      const project = (row[RUN_PROJECT_COLUMN] ?? '').trim() || this.linkCtx.sourceProject;
+      url =
+        `https://wandb.ai/${encodeURIComponent(this.linkCtx.entity)}/` +
+        `${encodeURIComponent(project)}/runs/${encodeURIComponent(id)}`;
+    }
+    return { name, seed, url };
   }
 
   private aggregateGroup(

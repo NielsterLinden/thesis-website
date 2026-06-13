@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { SiteMeta, ThesisAnchors } from '../types';
-import { SUGGESTIONS } from './Chat';
-import { ChatIcon, FigureIcon, GithubIcon, PdfIcon, WandbIcon } from './icons';
-import { Tour } from './Tour';
+import { SiteMeta } from '../types';
+import { ChatIcon, FigureIcon, GithubIcon, PdfIcon } from './icons';
 import { WandbModal } from './WandbModal';
 
 /** Prefilled question for the modal's "create your own report" path — routes
@@ -24,13 +22,11 @@ function repoTreeUrl(meta: SiteMeta | null): string | null {
 
 export function Landing({
   meta,
-  anchors,
   onOpenChat,
   onOpenPdf,
   onOpenFigures,
 }: {
   meta: SiteMeta | null;
-  anchors: ThesisAnchors | null;
   onOpenChat: (prompt?: string) => void;
   onOpenPdf: () => void;
   onOpenFigures: () => void;
@@ -44,96 +40,64 @@ export function Landing({
         <section className="landing-hero">
           <h1>Hi!</h1>
           <p className="landing-intro">
-            This is the companion webapp to my thesis. The PDF is the distilled story; this site is the launching
-            pad for everything behind it. From here you can:
+            This is the companion app for my thesis: one place to interact with everything behind it. Read the
+            thesis, browse every figure, explore the trained models in Weights &amp; Biases, dig into the code, or
+            just ask the assistant.
           </p>
-          <ul className="landing-caps">
-            <li>
-              <strong>Read the thesis</strong> right here in the browser.
-            </li>
-            <li>
-              <strong>Browse the figures</strong>: every plot from the thesis, with what it shows, the models behind
-              it, and a link into the run database.
-            </li>
-            <li>
-              <strong>Visit the codebase</strong>: the exact pinned snapshot the results were produced from.
-            </li>
-            <li>
-              <strong>Browse every trained model</strong> in the Weights &amp; Biases run database, or download the
-              frozen export and do your own research.
-            </li>
-            <li>
-              <strong>Open pre-made W&amp;B reports</strong> that explain the experiment axes and metrics.
-            </li>
-            <li>
-              <strong>Compose your own report</strong> over the frozen run data, drafted only after your explicit
-              confirmation.
-            </li>
-            <li>
-              <strong>Ask the assistant</strong> anything: it holds the complete thesis source in its context window
-              and uses tools to search the code and query the frozen run database.
-            </li>
-          </ul>
         </section>
 
-        <div className="landing-actions">
-          <button className="action action-primary action-chat" onClick={() => onOpenChat()}>
-            <ChatIcon /> Chat with the assistant
+        <div className="landing-cards">
+          <button className="dest dest-chat" onClick={() => onOpenChat()}>
+            <ChatIcon size={26} />
+            <span className="dest-text">
+              <span className="dest-title">Chat with the assistant</span>
+              <span className="dest-desc">Ask anything about the thesis, the code, or the experiments.</span>
+            </span>
           </button>
-          <div className="landing-actions-row">
-            <button className="action action-secondary" onClick={onOpenPdf}>
-              <PdfIcon /> Thesis PDF
+          <div className="landing-cards-grid">
+            <button className="dest" onClick={onOpenPdf}>
+              <PdfIcon size={22} />
+              <span className="dest-text">
+                <span className="dest-title">Thesis PDF</span>
+                <span className="dest-desc">Read the full thesis in your browser.</span>
+              </span>
             </button>
-            <button className="action action-secondary" onClick={onOpenFigures}>
-              <FigureIcon /> Figures
+            <button className="dest" onClick={onOpenFigures}>
+              <FigureIcon size={22} />
+              <span className="dest-text">
+                <span className="dest-title">Figures</span>
+                <span className="dest-desc">Every figure from the thesis and beyond.</span>
+              </span>
             </button>
+            <button className="dest" onClick={() => setWandbOpen(true)}>
+              <img className="dest-logo" src="/wandb_logo.png" alt="" aria-hidden="true" />
+              <span className="dest-text">
+                <span className="dest-title">Weights &amp; Biases</span>
+                <span className="dest-desc">Browse the runs and reports, or compose a new one with the assistant.</span>
+              </span>
+            </button>
+            <a className="dest" href="/runs.csv" download>
+              <img className="dest-logo" src="/excel.png" alt="" aria-hidden="true" />
+              <span className="dest-text">
+                <span className="dest-title">Data (Excel)</span>
+                <span className="dest-desc">Download the frozen run export as a spreadsheet (CSV).</span>
+              </span>
+            </a>
             {treeUrl && (
-              <a className="action action-secondary" href={treeUrl} target="_blank" rel="noreferrer">
-                <GithubIcon /> GitHub
+              <a className="dest" href={treeUrl} target="_blank" rel="noreferrer">
+                <GithubIcon size={22} />
+                <span className="dest-text">
+                  <span className="dest-title">GitHub</span>
+                  <span className="dest-desc">The exact pinned code snapshot behind the results.</span>
+                </span>
               </a>
             )}
-            <button className="action action-secondary" onClick={() => setWandbOpen(true)}>
-              <WandbIcon /> Weights &amp; Biases
-            </button>
           </div>
         </div>
 
-        <section className="landing-section">
-          <h2>Or start with one of these:</h2>
-          <div className="suggestions">
-            {SUGGESTIONS.map((s) => (
-              <button key={s} className="suggestion" onClick={() => onOpenChat(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="landing-section">
-          <h2>Grounded answers, not vibes</h2>
-          <p>
-            The assistant is not a generic chatbot. The full thesis TeX sits in its context, and every factual claim
-            is backed by a tool call over the pinned code snapshot or the frozen experiment export, and carries a
-            citation chip you can verify:
-          </p>
-          <p className="trust-chips">
-            <span className="cite cite-thesis">
-              <span className="cite-kind">thesis</span> §4.2
-            </span>{' '}
-            opens the thesis PDF at that exact section ·{' '}
-            <span className="cite cite-code">
-              <span className="cite-kind">code</span> src/model.py:42-58
-            </span>{' '}
-            links to those exact lines at the pinned commit ·{' '}
-            <span className="cite cite-wandb">
-              <span className="cite-kind">wandb</span> H10==&quot;d256_L6&quot;, metric=eval_v2/test_auroc, agg=median
-            </span>{' '}
-            reveals the full query result (filters, groups, N) behind a number.
-          </p>
-          <p>When no tool-grounded evidence exists, the assistant says so rather than inventing an answer.</p>
-        </section>
-
-        <Tour meta={meta} anchors={anchors} onOpenChat={() => onOpenChat()} />
+        <p className="landing-trust">
+          Every answer the assistant gives is grounded in these sources and carries a citation you can verify.
+        </p>
 
         {meta && treeUrl && (
           <footer className="landing-footer">

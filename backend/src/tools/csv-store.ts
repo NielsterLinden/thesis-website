@@ -7,6 +7,13 @@ export const NOT_APPLICABLE = '<not_applicable>';
 /** CSV column holding the random seed; the across-seeds aggregation groups over it. */
 export const SEED_COLUMN = 'config/axes/R5_Seed';
 
+/** Run-identity columns of the frozen export. A live W&B run URL
+ *  (https://wandb.ai/<entity>/<project>/runs/<id>) is built from these, so a
+ *  query-result group can drill down to the exact runs behind a median. */
+export const RUN_ID_COLUMN = 'meta_run/id';
+export const RUN_NAME_COLUMN = 'meta_run/name';
+export const RUN_PROJECT_COLUMN = 'meta_run/project';
+
 const AXIS_PREFIX = 'config/axes/';
 const METRIC_PREFIX = 'eval_v2/';
 

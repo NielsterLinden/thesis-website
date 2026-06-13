@@ -6,16 +6,28 @@ const H10 = 'config/axes/H10_Model Size Label';
 const B1 = 'config/axes/B1_Bias Activation Set';
 const SEED = 'config/axes/R5_Seed';
 const AUROC = 'eval_v2/test_auroc';
+const RUN_ID = 'meta_run/id';
+const RUN_NAME = 'meta_run/name';
+const RUN_PROJECT = 'meta_run/project';
 
 function synthetic(): CsvStore {
-  const columns = [H10, B1, SEED, AUROC];
+  const columns = [H10, B1, SEED, AUROC, RUN_ID, RUN_NAME, RUN_PROJECT];
+  const r = (b1: string, seed: string, auroc: string, id: string, name: string) => ({
+    [H10]: 'd256_L6',
+    [B1]: b1,
+    [SEED]: seed,
+    [AUROC]: auroc,
+    [RUN_ID]: id,
+    [RUN_NAME]: name,
+    [RUN_PROJECT]: 'thesis-ml',
+  });
   const rows = [
-    { [H10]: 'd256_L6', [B1]: 'none', [SEED]: '0', [AUROC]: '0.90' },
-    { [H10]: 'd256_L6', [B1]: 'none', [SEED]: '1', [AUROC]: '0.92' },
-    { [H10]: 'd256_L6', [B1]: 'none', [SEED]: '2', [AUROC]: '0.94' },
-    { [H10]: 'd256_L6', [B1]: 'none', [SEED]: '3', [AUROC]: '<not_applicable>' },
-    { [H10]: 'd256_L6', [B1]: 'gelu', [SEED]: '0', [AUROC]: '0.80' },
-    { [H10]: 'd256_L6', [B1]: 'gelu', [SEED]: '1', [AUROC]: '0.82' },
+    r('none', '0', '0.90', 'r-none-0', 'amber-0'),
+    r('none', '1', '0.92', 'r-none-1', 'amber-1'),
+    r('none', '2', '0.94', 'r-none-2', 'amber-2'),
+    r('none', '3', '<not_applicable>', 'r-none-3', 'amber-3'),
+    r('gelu', '0', '0.80', 'r-gelu-0', 'brisk-0'),
+    r('gelu', '1', '0.82', 'r-gelu-1', 'brisk-1'),
   ];
   return new CsvStore(columns, rows);
 }
@@ -78,13 +90,50 @@ describe('WandbQueryTool (synthetic, deterministic)', () => {
     expect(qr!.filters).toEqual([{ field: 'H10', op: '==', value: 'd256_L6' }]);
     expect(qr!.matching_runs).toBe(6);
     expect(qr!.truncated_groups).toBe(0);
-    expect(qr!.groups).toEqual([
+    // Scalar shape unchanged; runs (drill-down) are asserted separately below.
+    expect(qr!.groups.map(({ key, value, n, skipped }) => ({ key, value, n, skipped }))).toEqual([
       { key: 'gelu', value: 0.81, n: 2, skipped: 0 },
       { key: 'none', value: 0.92, n: 3, skipped: 1 },
     ]);
     // The attached citation is byte-identical to the token in the text — the
     // frontend matches the model's chip against it.
     expect(res.content.trim().endsWith(qr!.citation)).toBe(true);
+  });
+
+  it('attaches verified run links per group when a W&B link context is configured', async () => {
+    const linked = new WandbQueryTool(synthetic(), {
+      entity: 'nterlind-nikhef',
+      sourceProject: 'thesis-ml',
+    });
+    const res = await linked.execute({
+      metric: 'test_auroc',
+      filters: [{ field: 'H10', op: '==', value: 'd256_L6' }],
+      groupby: 'B1',
+      agg: 'median',
+    });
+    const none = res.queryResult!.groups.find((g) => g.key === 'none')!;
+    // 'none' has 3 numeric seeds + 1 sentinel row = 4 real runs (a run is real
+    // even when its metric cell is the sentinel), all under the per-group cap.
+    expect(none.runs).toHaveLength(4);
+    expect(none.runs_omitted).toBeUndefined();
+    // Sorted by seed; each run links to its live W&B run, built from its own id.
+    expect(none.runs![0]).toEqual({
+      name: 'amber-0',
+      seed: '0',
+      url: 'https://wandb.ai/nterlind-nikhef/thesis-ml/runs/r-none-0',
+    });
+  });
+
+  it('lists runs by name with no URL when W&B is not configured', async () => {
+    const res = await tool.execute({
+      metric: 'test_auroc',
+      filters: [{ field: 'H10', op: '==', value: 'd256_L6' }],
+      groupby: 'B1',
+    });
+    const runs = res.queryResult!.groups.flatMap((g) => g.runs ?? []);
+    expect(runs.length).toBeGreaterThan(0);
+    expect(runs.every((r) => r.url === null)).toBe(true);
+    expect(runs.every((r) => r.name.length > 0)).toBe(true);
   });
 
   it('attaches no queryResult when nothing matches (nothing to visualize)', async () => {
